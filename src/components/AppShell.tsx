@@ -262,7 +262,8 @@ export function AppShell({
                                   : "text-text-2 hover:bg-fill-2",
                               )}
                             >
-                              {item.label}
+                              <span className="truncate">{item.label}</span>
+                              {item.isIncomplete ? <SidebarBadge /> : null}
                             </button>
                           );
                         })}
@@ -323,6 +324,7 @@ export function AppShell({
                             )}
                           >
                             <span className="truncate">{item.label}</span>
+                            {item.isIncomplete ? <SidebarBadge /> : null}
                           </button>
                         );
                       })}
@@ -567,6 +569,14 @@ function HeaderIconButton({
     >
       {icon}
     </button>
+  );
+}
+
+function SidebarBadge() {
+  return (
+    <span className="ml-auto shrink-0 rounded-md bg-[rgba(255,125,0,0.12)] px-1.5 py-0.5 text-[11px] leading-4 text-warning">
+      未完善
+    </span>
   );
 }
 

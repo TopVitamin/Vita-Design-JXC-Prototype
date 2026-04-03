@@ -1,4 +1,4 @@
-import { Button, PageTitle, SearchInput, Select, StatusPill } from "../components/Ui";
+import { Button, FilterActions, FilterField, PageTitle, SearchInput, Select, StatusPill } from "../components/Ui";
 import { ledgerRecords } from "../data/mock";
 
 export function CustomerLedgerPage() {
@@ -6,17 +6,20 @@ export function CustomerLedgerPage() {
     <div className="space-y-6">
       <PageTitle title="客户往来查询" />
 
-      <div className="flex flex-col gap-4 rounded-lg border border-line-1 bg-white p-4 xl:flex-row xl:items-center xl:justify-between">
-        <div className="grid flex-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <SearchInput value="" onChange={() => {}} placeholder="搜索客户/单号" />
+      <div className="flex flex-wrap items-end gap-4 rounded-lg border border-line-1 bg-white p-4">
+        <FilterField label="综合搜索" className="min-w-[220px]">
+          <SearchInput value="" onChange={() => {}} placeholder="搜索客户/单号" className="w-[220px]" />
+        </FilterField>
+        <FilterField label="客户等级" className="min-w-[180px]">
           <Select value="" onChange={() => {}} options={["全部客户", "重点客户", "账期客户"]} placeholder="客户等级" />
+        </FilterField>
+        <FilterField label="往来状态" className="min-w-[180px]">
           <Select value="" onChange={() => {}} options={["待回款", "已结清", "已逾期"]} placeholder="往来状态" />
+        </FilterField>
+        <FilterField label="时间范围" className="min-w-[180px]">
           <Select value="" onChange={() => {}} options={["本月", "近30天", "本季度"]} placeholder="时间范围" />
-        </div>
-        <div className="flex items-center gap-2">
-          <Button>查询</Button>
-          <Button>导出对账单</Button>
-        </div>
+        </FilterField>
+        <FilterActions extra={<Button>导出对账单</Button>} />
       </div>
 
       <div className="overflow-hidden rounded-xl border border-line-1">

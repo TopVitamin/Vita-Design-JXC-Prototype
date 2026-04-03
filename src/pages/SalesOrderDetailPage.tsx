@@ -1,6 +1,6 @@
 import { startTransition, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Button, PageTitle } from "../components/Ui";
+import { Button, PageTitle, TabBar } from "../components/Ui";
 import {
   SalesOrderActionLogPanel,
   SalesOrderCustomerSide,
@@ -69,28 +69,16 @@ export function SalesOrderDetailPage() {
 
       <DetailHeaderStrip record={record} />
 
-      <div className="border-b border-line-1">
-        <div className="flex flex-wrap items-center gap-5 px-1">
-          {detailTabs.map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() =>
-                startTransition(() => {
-                  setActiveTab(tab.key);
-                })
-              }
-              className={cn(
-                "relative pb-3 pt-1 text-[14px] font-medium transition",
-                activeTab === tab.key ? "text-brand-6" : "text-text-2 hover:text-text-1",
-              )}
-            >
-              {tab.label}
-              {activeTab === tab.key ? <span className="absolute bottom-0 left-0 h-[2px] w-full bg-brand-6" /> : null}
-            </button>
-          ))}
-        </div>
-      </div>
+      <TabBar
+        items={detailTabs}
+        activeKey={activeTab}
+        onChange={(tab) =>
+          startTransition(() => {
+            setActiveTab(tab);
+          })
+        }
+        className="mb-4 border-line-1"
+      />
 
       {activeTab === "items" ? (
         <div className="space-y-4">

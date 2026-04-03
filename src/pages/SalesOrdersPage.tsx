@@ -1,7 +1,7 @@
 import { startTransition, useDeferredValue, useMemo, useState } from "react";
 import { CalendarDays, ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Button, Checkbox, Pagination, SearchInput, StatusPill, TableSortHeader } from "../components/Ui";
+import { Button, Checkbox, FilterActions, FilterField, Pagination, SearchInput, StatusPill, TabBar, TableSortHeader } from "../components/Ui";
 import { Drawer } from "../components/Drawer";
 import { salesOrders, salesOrderTabs } from "../data/mock";
 import { cn } from "../utils/cn";
@@ -91,56 +91,34 @@ export function SalesOrdersPage() {
   return (
     <div className="flex flex-col">
       {/* 状态的搜索做成类似参考图的底部带下划线的 Tab 切换 */}
-      <div className="mb-5 flex items-center gap-6 border-b border-line-2 px-1 pt-2">
-        {salesOrderTabs.map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            onClick={() =>
-              startTransition(() => {
-                setActiveTab(tab);
-              })
-            }
-            className={cn(
-              "relative pb-3 text-[14px] font-medium transition cursor-pointer custom-tab",
-              activeTab === tab
-                ? "text-brand-6"
-                : "text-text-2 hover:text-text-1",
-            )}
-          >
-            {tab}
-            {activeTab === tab && (
-              <div className="absolute bottom-0 left-0 h-[2px] w-full bg-brand-6" />
-            )}
-          </button>
-        ))}
-      </div>
+      <TabBar
+        items={salesOrderTabs.map((tab) => ({ key: tab, label: tab }))}
+        activeKey={activeTab}
+        onChange={(tab) =>
+          startTransition(() => {
+            setActiveTab(tab);
+          })
+        }
+      />
 
       {/* 搜索过滤模块：独立一块放置所有特征查询功能，左侧起算 */}
-      <div className="mb-6 flex flex-wrap items-center gap-5 rounded-lg border border-line-1 bg-[rgba(247,248,250,0.5)] px-4 py-3.5 text-[13px]">
-        
-        <div className="flex items-center shrink-0">
-          <span className="text-text-2 font-medium">业务日期：</span>
+      <div className="mb-6 flex flex-wrap items-end gap-5 rounded-lg border border-line-1 bg-[rgba(247,248,250,0.5)] px-4 py-3.5 text-[13px]">
+        <FilterField label="业务日期" className="min-w-[260px]">
           <RangeDateFields />
-        </div>
+        </FilterField>
 
-        <div className="h-4 w-px bg-line-2 shrink-0" />
-
-        <div className="flex items-center shrink-0">
-          <span className="text-text-2 font-medium">综合搜索：</span>
+        <FilterField label="综合搜索" className="min-w-[220px]">
           <SearchInput value={keyword} onChange={setKeyword} placeholder="单号 / 客户 / 仓库" className="w-[200px] sm:w-[260px] bg-white" />
-        </div>
+        </FilterField>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <Button tone="primary">查询</Button>
-          <Button>重置</Button>
-        </div>
-
-        <div className="h-4 w-px bg-line-2 shrink-0 ml-1" />
-        
-        <Button onClick={() => setIsAdvancedOpen(true)} className="shrink-0">
-          高级搜索
-        </Button>
+        <FilterActions
+          onSecondaryClick={() => setKeyword("")}
+          extra={
+            <Button onClick={() => setIsAdvancedOpen(true)}>
+              高级搜索
+            </Button>
+          }
+        />
       </div>
 
       {/* 动作行与表格合成一个紧密的组块来体现“亲密性原则” */}

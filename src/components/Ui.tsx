@@ -264,6 +264,82 @@ export function FormField({
   );
 }
 
+export function FilterField({
+  label,
+  children,
+  className,
+}: {
+  label: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn("flex min-w-[160px] flex-col gap-2", className)}>
+      <div className="text-[13px] text-text-2">{label}</div>
+      {children}
+    </div>
+  );
+}
+
+export function FilterActions({
+  primaryLabel = "查询",
+  secondaryLabel = "重置",
+  extra,
+  onPrimaryClick,
+  onSecondaryClick,
+}: {
+  primaryLabel?: string;
+  secondaryLabel?: string;
+  extra?: ReactNode;
+  onPrimaryClick?: () => void;
+  onSecondaryClick?: () => void;
+}) {
+  return (
+    <div className="flex items-end gap-2 self-end">
+      <Button tone="primary" className="min-w-[72px] justify-center" onClick={onPrimaryClick}>
+        {primaryLabel}
+      </Button>
+      <Button className="min-w-[72px] justify-center" onClick={onSecondaryClick}>
+        {secondaryLabel}
+      </Button>
+      {extra}
+    </div>
+  );
+}
+
+export function TabBar<T extends string>({
+  items,
+  activeKey,
+  onChange,
+  className,
+}: {
+  items: Array<{ key: T; label: string }>;
+  activeKey: T;
+  onChange: (key: T) => void;
+  className?: string;
+}) {
+  return (
+    <div className={cn("mb-5 border-b border-line-2 px-1 pt-2", className)}>
+      <div className="flex flex-wrap items-center gap-5 px-1">
+        {items.map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            onClick={() => onChange(item.key)}
+            className={cn(
+              "relative pb-3 text-[14px] font-medium transition",
+              activeKey === item.key ? "text-brand-6" : "text-text-2 hover:text-text-1",
+            )}
+          >
+            {item.label}
+            {activeKey === item.key ? <span className="absolute bottom-0 left-0 h-[2px] w-full bg-brand-6" /> : null}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function StatusPill({
   children,
   tone,

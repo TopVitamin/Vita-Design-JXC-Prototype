@@ -38,6 +38,7 @@ export type NavChild = {
   pageType: "dashboard" | "list" | "detail" | "form" | "query" | "cashier" | "placeholder";
   depth: PageDepth;
   description: string;
+  isIncomplete?: boolean;
 };
 
 export type NavGroup = {
@@ -133,6 +134,7 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "dashboard",
         depth: "core",
         description: "展示核心入口、待办和主链路概览。",
+        isIncomplete: true,
       },
     ],
   },
@@ -146,6 +148,7 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "list",
         depth: "secondary",
         description: "维护商品档案、分类、规格和价格策略。",
+        isIncomplete: true,
       },
       {
         key: "customer-management",
@@ -153,6 +156,7 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "list",
         depth: "secondary",
         description: "维护客户等级、账期和往来策略。",
+        isIncomplete: true,
       },
       {
         key: "supplier-management",
@@ -160,6 +164,7 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "list",
         depth: "secondary",
         description: "维护供应商主体、合作属性和结算规则。",
+        isIncomplete: true,
       },
       {
         key: "warehouse-management",
@@ -167,6 +172,7 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "list",
         depth: "secondary",
         description: "维护仓库档案、用途和库存归属。",
+        isIncomplete: true,
       },
     ],
   },
@@ -187,6 +193,7 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "detail",
         depth: "secondary",
         description: "查看和执行销售出库，跟踪发货状态。",
+        isIncomplete: true,
       },
       {
         key: "sales-query",
@@ -194,6 +201,7 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "query",
         depth: "secondary",
         description: "查询订单、客户、商品维度的销售记录。",
+        isIncomplete: true,
       },
     ],
   },
@@ -207,6 +215,7 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "cashier",
         depth: "core",
         description: "承接门店现场成交，完成搜索、加购、折让、收款。",
+        isIncomplete: true,
       },
     ],
   },
@@ -220,6 +229,7 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "list",
         depth: "secondary",
         description: "查看采购下单记录，承接供货需求。",
+        isIncomplete: true,
       },
       {
         key: "purchase-receipt",
@@ -227,6 +237,7 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "list",
         depth: "secondary",
         description: "查看采购入库和到货状态。",
+        isIncomplete: true,
       },
       {
         key: "purchase-return",
@@ -234,6 +245,7 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "list",
         depth: "secondary",
         description: "查看采购退货记录与供应商协同状态。",
+        isIncomplete: true,
       },
     ],
   },
@@ -247,6 +259,7 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "query",
         depth: "core",
         description: "展示现存、占用、可用库存，承接共享底账查询。",
+        isIncomplete: true,
       },
       {
         key: "stock-transfer",
@@ -254,6 +267,7 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "list",
         depth: "secondary",
         description: "记录仓间调拨和调拨执行状态。",
+        isIncomplete: true,
       },
       {
         key: "stock-count",
@@ -261,6 +275,7 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "list",
         depth: "secondary",
         description: "查看盘点计划、差异和处理结果。",
+        isIncomplete: true,
       },
       {
         key: "stock-loss",
@@ -268,6 +283,7 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "list",
         depth: "secondary",
         description: "记录报损申请和库存调整结果。",
+        isIncomplete: true,
       },
     ],
   },
@@ -281,6 +297,7 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "query",
         depth: "secondary",
         description: "查看客户应收余额与账龄。",
+        isIncomplete: true,
       },
       {
         key: "receipt-entry",
@@ -288,6 +305,7 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "form",
         depth: "core",
         description: "承接财务回款登记，录入客户、金额和付款方式。",
+        isIncomplete: true,
       },
       {
         key: "payable-query",
@@ -295,6 +313,7 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "query",
         depth: "secondary",
         description: "查看供应商应付余额与账期。",
+        isIncomplete: true,
       },
       {
         key: "payment-entry",
@@ -302,6 +321,7 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "form",
         depth: "secondary",
         description: "记录对供应商付款及付款备注。",
+        isIncomplete: true,
       },
     ],
   },
@@ -315,6 +335,7 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "query",
         depth: "secondary",
         description: "提供基础销售汇总指标和趋势。",
+        isIncomplete: true,
       },
       {
         key: "inventory-balance",
@@ -322,6 +343,7 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "query",
         depth: "secondary",
         description: "提供库存余额和仓库口径视图。",
+        isIncomplete: true,
       },
       {
         key: "customer-ledger",
@@ -329,6 +351,7 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "query",
         depth: "core",
         description: "查看客户应收、回款记录和往来余额。",
+        isIncomplete: true,
       },
     ],
   },
@@ -342,6 +365,7 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "placeholder",
         depth: "placeholder",
         description: "展示权限配置入口与后续扩展方向。",
+        isIncomplete: true,
       },
       {
         key: "document-number",
@@ -349,6 +373,7 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "placeholder",
         depth: "placeholder",
         description: "展示编号规则配置入口。",
+        isIncomplete: true,
       },
       {
         key: "opening-init",
@@ -356,6 +381,7 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "placeholder",
         depth: "placeholder",
         description: "展示初始库存和基础数据初始化入口。",
+        isIncomplete: true,
       },
       {
         key: "print-template",
@@ -363,6 +389,7 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "placeholder",
         depth: "placeholder",
         description: "展示打印配置入口。",
+        isIncomplete: true,
       },
       {
         key: "operation-log",
@@ -370,6 +397,7 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "placeholder",
         depth: "placeholder",
         description: "展示日志入口与审计方向。",
+        isIncomplete: true,
       },
     ],
   },
@@ -750,4 +778,3 @@ export function getPageMeta(view: ViewKey) {
     description: "展示核心入口、待办和主链路概览。",
   };
 }
-
