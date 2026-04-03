@@ -1,62 +1,46 @@
-# Vita-Design JXC Prototype (企业级进销存高密度管理系统原型)
+# Vita-Design JXC Prototype (进销存全景路由系统原型)
 
-> 本项目是一套基于最新技术栈构建的**“中国式复杂中后台（B端）”**前端重型架构骨架。它彻底抛弃了西方 SaaS 常见的“大白空”极简风格，转而向阿里云、飞书管理后台等中国一线大厂系统对齐，实现了极致的空间压榨、极高的数据密度呈现与强悍的十万级长列表渲染性能。
+> 本项目是专为“大型进销存(JXC)与供应链管理(SCM)”打造的综合中后台前段工程骨架。它以全量业务模块的路由映射为核心，实现了从工作台看板到具体业务单据流转的 1:1 结构级高保证还原。
 
-## ✨ 核心特性大纲
+## ✨ 核心工程架构与演进方向
 
-这是一套真正的“六边形战士”架构，不仅有皮囊，更有内脏：
+本原型并未侧重于个别页面的高细粒度美术填充，而是将视野拔高，构建了整个企业级系统的**路由血脉与骨干航道**。
 
-### 🎨 1. 像素级的高冷专业视觉设计 (Design Tokens)
-- **极简 Zinc 黑白灰**：完全舍弃原版 Shadcn UI 默认带来的圆角与投影滥用。全系统以 `bg-zinc-100` 为基底，利用 `1px border-zinc-200` 进行克制的层级勾勒。
-- **中国式企业级字体红线**：严打西方常见的奇数字号（13px/15px），全面收口至双数：主流程 `14px (text-sm)`，数据区 `12px (text-xs)`。
-- **空间极限利用**：表单件 (Input/Select/Button) 统一死守 `32px (h-8)` 黄金高度，卡片间使用 `gap-2` 细胞级紧闭度。
+### 1. 广袤的 Router-DOM 矩阵网络
+- **巨型菜单解析**：基于 `react-router-dom` 部署。底层预制了完整的菜单层级映射（商品、销售、采购、仓储物理设备、账务报表等顶级菜单），并通过 `AppShell` 完成了极度稳定的嵌套展示。
+- **页面级动态元数据 (Meta Injection)**：在用户从“销售订单列表”跳转到“新增订单”或“详情页”时，系统会依托底层的纯函数映射，实时变幻页面级的 Header、Title、Breadcrumb。
 
-### 🧠 2. 无缝多页签引擎 (Zustand Multi-Tabs)
-- 摒弃了导致开发成本急剧增加、页面频闪的传统 Router 跳转。
-- 使用 **Zustand** 构建全局状态中枢。你在列表页点击“新建全量组织”，系统会犹如 VS Code 一般，在顶部直接**拉起一个全新的 Tab 页签**，而原来列表页的搜索流、横向滚动条状态都会被 100% 封存保活（Keep-Alive）。
+### 2. 泛型化(Generic)的业务视图装配
+传统手写上百个页面的思路被彻底击碎，项目大范围启用了**泛型生成(Generic Rendering)**：
+- 将复杂的页面提纯归类为：`GenericCrudListPage`、`GenericFormPage`、`GenericQueryPage`、`GenericConfigPage`。
+- 新增一个进销存业务线只需在枚举中声明 Key，其基础的 CRUD 路由骨架与页面装配组件将借由高阶组件自动化合成。
 
-### 🚀 3. 万行数据虚拟列表墙 (TanStack Performance)
-- **极限抗压渲染**：原生 Table 画 5000 行会直接炸飞浏览器。本项目引入了前沿的 `@tanstack/react-table` + `@tanstack/react-virtual` 底层库。
-- 将传统 DOM 渲染替换为“无头表格 + 视窗跟踪”。即便后端吐出海量报表数据，DOM 树上永远只会有当前视窗高度的二三十个节点，达成如丝般顺滑的 60fps 体验。
+### 3. 主流的 React 后台底层生态
+- **Core**: React 18 + TS 构建坚如磐石的强类型保障。
+- **Router**: 采用安全的 HashRouter 策略防脱轨。
+- **Styling**: Tailwind CSS + Lucide Icons，无缝构建现代化组件块，拒绝依赖传统厚重的定制化 CSS 包袱。
 
-### 🛡 4. 军工级防脱轨组件
-- **原子权限拦截**：构建了独立的 `<AuthWrapper>` 组件，不符合权限的点（例如含有抹除高危意义的“删除/封禁”），直接遭遇 React 虚拟 DOM 阶段的物理级粉碎，并非简单的 `disabled: opacity-50`。
-- **体验级 Loading 与 Empty 空置态**：系统自带高密度骨架屏（Skeleton Table）与零数据占位指引，实现 B 端产品最需要的“操作防呆闭环”。
+## 📦 如何在本地开启全景预览
 
-## 🛠️ 骨干技术栈
-
-- **Core**: React 18 + TypeScript + Vite
-- **Styling**: Tailwind CSS v3
-- **Components**: Shadcn UI (源码级暴改)
-- **State Mgmt**: Zustand
-- **Data Grid**: TanStack Table v8 + React Virtual
-- **Form (Prep)**: React Hook Form + Zod 
-
-## 📦 本地快速起跑指令
-
-该工程已被高度浓缩，没有任何难以理解的 Node.js 或 Nginx 依赖障碍，确保开发环境一键起飞：
+非常轻量的环境依赖设计，拉取后即可一键点火：
 
 ```bash
-# 1. 克隆这份代码到本地
-git clone https://github.com/TopVitamin/Vita-Design-JXC-Prototype.git
-
-# 2. 进入引擎目录
+# 1. 切入工程引擎机房
 cd jxc-prototype
 
-# 3. 装载依赖引擎
+# 2. 拉取全量运转依赖
 npm install
 
-# 4. 点火运行 (通常会秒级飙升到 localhost:5173)
+# 3. 毫秒级冷启动引擎
 npm run dev
 ```
 
-## 🏗 主要工程路由参照表
+## 🏗 工程目录导读
 
-- 路由调度核心：`src/store/tabStore.ts`
-- 架构页面骨架：`src/layouts/AdminLayout.tsx`
-- 十万级虚拟大表单：`src/components/DenseTable.tsx`
-- 轻重交互收口案例演示：`src/pages/DataViewPage.tsx` && `src/pages/DenseFormPage.tsx`
+- `src/App.tsx`: 系统路由中枢总闸，统筹整个 JXC 版图的跳转与保护逻辑。
+- `src/data/`: 存放控制庞大菜单体系和视图枚举的硬编码引擎 (Menu/Meta Trees)。
+- `src/pages/`: 包含销售、采购、入库等独立精编页面以及大量的 `GenericModulePages.tsx` 泛型克隆模版。
+- `src/components/AppShell/`: 企业级标准骨架，承接了侧边导航(Sidebar)与全局多级面包屑顶栏(Header)。
 
 ---
-
-*Designed & Engineered for High-Density Chinese B2B Business Solutions.*
+*Enterprise Resource Planning (ERP) & JXC Core Prototype Structure.*
