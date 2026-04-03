@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-1: #e8f3ff;
+  --brand-3: #94bfff;
+  --brand-4: #6aa1ff;
+  --brand-5: #4080ff;
+  --brand-6: #165dff;
+  --brand-7: #0e42d2;
+  --text-1: #1d2129;
+  --text-2: #4e5969;
+  --text-3: #86909c;
+  --text-4: #c9cdd4;
+  --text-white: #ffffff;
+  --fill-1: #ffffff;
+  --fill-2: #f7f8fa;
+  --fill-3: #f2f3f5;
+  --fill-4: #e5e6eb;
+  --line-1: #f2f3f5;
+  --line-2: #e5e6eb;
+  --line-3: #c9cdd4;
+  --line-4: #86909c;
+  --success-6: #00b42a;
+  --warning-6: #ff7d00;
+  --danger-6: #f53f3f;
+  font-family: "PingFang SC", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+  color: var(--text-1);
+  background: #f5f7fa;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  background: linear-gradient(180deg, #f7f9fc 0%, #f5f7fa 100%);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+table {
+  border-spacing: 0;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  background-color: rgba(134, 144, 156, 0.35);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
