@@ -8,7 +8,7 @@ export function RetailCashierPage() {
   const payable = subtotal - discount;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageTitle title="零售收银">承接门店现场成交，当前覆盖商品搜索、已选清单、折让与结算区。</PageTitle>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -45,13 +45,9 @@ export function RetailCashierPage() {
                   </div>
                   <div className="flex items-center gap-5">
                     <div className="flex items-center gap-2 rounded-md border border-line-2 px-2 py-1">
-                      <button type="button" className="text-text-3">
-                        <Minus size={14} />
-                      </button>
+                      <Button size="icon" icon={<Minus size={14} />} className="text-text-3 hover:text-text-1" />
                       <span className="min-w-8 text-center text-sm text-text-1">{item.qty}</span>
-                      <button type="button" className="text-text-3">
-                        <Plus size={14} />
-                      </button>
+                      <Button size="icon" icon={<Plus size={14} />} className="text-text-3 hover:text-text-1" />
                     </div>
                     <div className="w-20 text-right text-sm font-medium text-text-1">¥{item.price * item.qty}</div>
                   </div>

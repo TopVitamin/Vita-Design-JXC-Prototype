@@ -4,6 +4,7 @@
 
 :root {
   --brand-1: #e8f3ff;
+  --brand-2: #c4dcff;
   --brand-3: #94bfff;
   --brand-4: #6aa1ff;
   --brand-5: #4080ff;
@@ -25,6 +26,9 @@
   --success-6: #00b42a;
   --warning-6: #ff7d00;
   --danger-6: #f53f3f;
+  --hover-bg: #fafcff;
+  --filter-bg: rgba(247, 248, 250, 0.5);
+  --filter-bg-solid: #f7f8fa;
   font-family: "PingFang SC", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
   color: var(--text-1);
   background: #f5f7fa;

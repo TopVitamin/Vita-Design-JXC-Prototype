@@ -1,6 +1,6 @@
 import { startTransition, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Button, PageTitle, TabBar } from "../components/Ui";
+import { Button, PageTitle, StatusPill, TabBar } from "../components/Ui";
 import {
   SalesOrderActionLogPanel,
   SalesOrderCustomerSide,
@@ -135,11 +135,11 @@ function DetailHeaderStrip({
     { label: "联系电话", value: record.contactPhone },
     {
       label: "订单状态",
-      value: <DetailStatusBadge tone={record.statusTone}>{record.status}</DetailStatusBadge>,
+      value: <StatusPill tone={record.statusTone}>{record.status}</StatusPill>,
     },
     {
       label: "审批状态",
-      value: <DetailStatusBadge tone={getApprovalTone(record.approvalStatus)}>{record.approvalStatus}</DetailStatusBadge>,
+      value: <StatusPill tone={getApprovalTone(record.approvalStatus)}>{record.approvalStatus}</StatusPill>,
     },
     { label: "业务日期", value: record.businessDate },
     { label: "交货日期", value: record.deliveryDate },
@@ -189,28 +189,6 @@ function DetailMetricStrip({
   );
 }
 
-function DetailStatusBadge({
-  tone,
-  children,
-}: {
-  tone: "green" | "blue" | "orange" | "red" | "gray";
-  children: React.ReactNode;
-}) {
-  const toneClass = {
-    green: "border-[rgba(0,180,42,0.18)] bg-[rgba(0,180,42,0.04)] text-success",
-    blue: "border-[rgba(22,93,255,0.18)] bg-[rgba(22,93,255,0.04)] text-brand-6",
-    orange: "border-[rgba(255,125,0,0.18)] bg-[rgba(255,125,0,0.04)] text-warning",
-    red: "border-[rgba(245,63,63,0.18)] bg-[rgba(245,63,63,0.04)] text-danger",
-    gray: "border-line-2 bg-fill-2 text-text-2",
-  }[tone];
-
-  return (
-    <span className={cn("inline-flex h-7 items-center rounded-md border px-2 text-[13px] font-medium leading-5", toneClass)}>
-      {children}
-    </span>
-  );
-}
-
 function getApprovalTone(status: string): "green" | "blue" | "orange" | "red" | "gray" {
   if (status.includes("通过") || status.includes("完成")) {
     return "green";
@@ -229,3 +207,4 @@ function getApprovalTone(status: string): "green" | "blue" | "orange" | "red" | 
   }
   return "gray";
 }
+

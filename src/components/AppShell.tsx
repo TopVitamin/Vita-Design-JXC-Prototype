@@ -210,7 +210,7 @@ export function AppShell({
   const sidebar = (
     <aside
       className={cn(
-        "relative flex h-full flex-col border-r border-[#edf1f5] bg-white transition-[width]",
+        "relative flex h-full flex-col border-r border-line-1 bg-white transition-[width]",
         isSidebarCollapsed ? "w-14" : "w-[200px]",
       )}
     >
@@ -235,7 +235,7 @@ export function AppShell({
                     className={cn(
                       "flex h-10 w-full items-center justify-center rounded-md transition",
                       inCurrentGroup
-                        ? "bg-[rgba(22,93,255,0.1)] text-brand-6"
+                        ? "bg-brand-1 text-brand-6"
                         : "text-text-2 hover:bg-fill-2",
                     )}
                   >
@@ -243,7 +243,7 @@ export function AppShell({
                   </button>
 
                   {activeCollapsedGroup === group.id ? (
-                    <div className="absolute left-14 top-0 z-20 w-56 overflow-hidden rounded-lg border border-line-2 bg-white shadow-[0_12px_32px_rgba(29,33,41,0.14)]">
+                    <div className="absolute left-14 top-0 z-20 w-56 overflow-hidden rounded-lg border border-line-2 bg-white shadow-dropdown">
                       <div className="border-b border-line-1 px-4 py-3 text-sm font-semibold text-text-1">
                         {group.label}
                       </div>
@@ -258,7 +258,7 @@ export function AppShell({
                               className={cn(
                                 "flex h-10 w-full items-center rounded-md px-3 text-left text-sm transition",
                                 active
-                                  ? "bg-[rgba(22,93,255,0.1)] font-medium text-brand-6"
+                                  ? "bg-brand-1 font-medium text-brand-6"
                                   : "text-text-2 hover:bg-fill-2",
                               )}
                             >
@@ -319,7 +319,7 @@ export function AppShell({
                                 ? "flex h-[42px] w-full items-center rounded-md pr-3 pl-9 text-left text-sm transition"
                                 : "hidden",
                               active
-                                ? "bg-[rgba(22,93,255,0.1)] font-medium text-brand-6"
+                                ? "bg-brand-1 font-medium text-brand-6"
                                 : "text-text-2 hover:bg-fill-2",
                             )}
                           >
@@ -354,7 +354,7 @@ export function AppShell({
   );
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-[#f5f7fa] text-text-1">
+    <div className="flex h-screen flex-col overflow-hidden bg-fill-2 text-text-1">
       <header className="flex h-[54px] items-center justify-between bg-brand-6 px-4 text-white shadow-panel lg:px-5">
         <div className="flex items-center gap-3 lg:gap-8">
           <button
@@ -441,7 +441,7 @@ export function AppShell({
             </button>
 
             {isProfileOpen ? (
-              <div className="absolute right-0 top-11 z-20 w-[260px] overflow-hidden rounded-lg border border-line-2 bg-white text-text-2 shadow-[0_12px_32px_rgba(29,33,41,0.14)]">
+              <div className="absolute right-0 top-11 z-20 w-[260px] overflow-hidden rounded-lg border border-line-2 bg-white text-text-2 shadow-dropdown">
                 <div className="border-b border-line-1 px-4 py-4">
                   <div className="flex items-start gap-3">
                     <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#ffcf8b] text-[15px] font-semibold text-[#7a2f00]">
@@ -521,7 +521,7 @@ export function AppShell({
         <div className="hidden lg:block">{sidebar}</div>
 
         {isSidebarOpen ? (
-          <div className="fixed inset-0 z-30 bg-[#0f172a]/35 lg:hidden" onClick={() => setIsSidebarOpen(false)}>
+          <div className="fixed inset-0 z-30 bg-black/35 lg:hidden" onClick={() => setIsSidebarOpen(false)}>
             <div className="h-full w-[200px] bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
               <div className="flex h-[54px] items-center justify-between border-b border-line-1 px-4">
                 <span className="text-sm font-semibold text-text-1">导航菜单</span>

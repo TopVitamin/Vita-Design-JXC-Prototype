@@ -35,7 +35,7 @@ export type ViewKey =
 export type NavChild = {
   key: ViewKey;
   label: string;
-  pageType: "dashboard" | "list" | "detail" | "form" | "query" | "cashier" | "placeholder";
+  pageType: "dashboard" | "list" | "detail" | "form" | "query" | "cashier" | "placeholder" | "config";
   depth: PageDepth;
   description: string;
   isIncomplete?: boolean;
@@ -185,7 +185,7 @@ export const inventoryNavGroups: NavGroup[] = [
         label: "销售订单",
         pageType: "list",
         depth: "core",
-        description: "承接批发开单主链路，处理订单查询、新建、状态跟踪。",
+        description: "承接批发开单主链路，处理订单查询、新增、状态跟踪。",
       },
       {
         key: "sales-delivery",
@@ -362,42 +362,37 @@ export const inventoryNavGroups: NavGroup[] = [
       {
         key: "user-permission",
         label: "用户与权限",
-        pageType: "placeholder",
-        depth: "placeholder",
-        description: "展示权限配置入口与后续扩展方向。",
-        isIncomplete: true,
+        pageType: "config",
+        depth: "secondary",
+        description: "维护用户账号、角色与数据权限。",
       },
       {
         key: "document-number",
         label: "单据编号",
-        pageType: "placeholder",
-        depth: "placeholder",
-        description: "展示编号规则配置入口。",
-        isIncomplete: true,
+        pageType: "config",
+        depth: "secondary",
+        description: "配置销售、采购、库存单据的编号规则。",
       },
       {
         key: "opening-init",
         label: "期初初始化",
-        pageType: "placeholder",
-        depth: "placeholder",
-        description: "展示初始库存和基础数据初始化入口。",
-        isIncomplete: true,
+        pageType: "config",
+        depth: "secondary",
+        description: "查看商品、客户、供应商和库存期初导入状态。",
       },
       {
         key: "print-template",
         label: "打印模板",
-        pageType: "placeholder",
-        depth: "placeholder",
-        description: "展示打印配置入口。",
-        isIncomplete: true,
+        pageType: "config",
+        depth: "secondary",
+        description: "维护销售、采购、库存单据打印模板。",
       },
       {
         key: "operation-log",
         label: "操作日志",
-        pageType: "placeholder",
-        depth: "placeholder",
-        description: "展示日志入口与审计方向。",
-        isIncomplete: true,
+        pageType: "config",
+        depth: "secondary",
+        description: "查看关键业务操作、审批动作和配置变更。",
       },
     ],
   },
@@ -619,7 +614,7 @@ export const placeholderSummaries: Record<ViewKey, PlaceholderSummary> = {
   },
   "sales-orders": {
     title: "销售订单",
-    desc: "核心列表页，用于查询、新建和跟踪批发订单。",
+    desc: "核心列表页，用于查询、新增和跟踪批发订单。",
     bullets: ["查询区", "操作区", "订单表格"],
   },
   "retail-cashier": {

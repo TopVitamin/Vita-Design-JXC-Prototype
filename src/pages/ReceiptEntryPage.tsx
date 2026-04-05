@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, FormField, HintBox, Input, PageTitle, Select, TextArea } from "../components/Ui";
+import { Button, DateField, FormField, HintBox, Input, PageTitle, Select, TextArea } from "../components/Ui";
 import { receiptFormDefault } from "../data/mock";
 
 export function ReceiptEntryPage() {
@@ -10,7 +10,7 @@ export function ReceiptEntryPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageTitle title="收款登记" />
 
       <HintBox>建议优先从销售订单或客户往来进入收款登记，保持业务链路闭环。</HintBox>
@@ -33,10 +33,10 @@ export function ReceiptEntryPage() {
           <Select value={form.paymentMethod} onChange={(value) => updateField("paymentMethod", value)} options={["现金", "银行转账", "支付宝", "微信支付"]} />
         </FormField>
         <FormField label="收款人" required>
-          <Input value={form.handler} onChange={(value) => updateField("handler", value)} placeholder="请输入经办人" />
+          <Select value={form.handler} onChange={(value) => updateField("handler", value)} options={["王晨", "李菲", "钱宇", "周曼"]} placeholder="请选择经办人" />
         </FormField>
         <FormField label="收款时间" required>
-          <Input value={form.receivedAt} onChange={(value) => updateField("receivedAt", value)} placeholder="请输入收款时间" />
+          <DateField value={form.receivedAt} onChange={(value) => updateField("receivedAt", value)} />
         </FormField>
       </div>
 
@@ -63,11 +63,9 @@ export function ReceiptEntryPage() {
         </div>
       </div>
 
-      <div className="flex flex-col items-stretch justify-center gap-3 border-t border-line-1 pt-6 sm:flex-row sm:items-center">
-        <Button tone="primary" className="min-w-[92px]">
-          提交登记
-        </Button>
-        <Button className="min-w-[92px]">取消</Button>
+      <div className="flex flex-col gap-3 border-t border-line-1 pt-4 sm:flex-row sm:justify-end">
+        <Button tone="primary">提交登记</Button>
+        <Button>取消</Button>
       </div>
     </div>
   );

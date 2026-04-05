@@ -17,7 +17,7 @@ export function SalesOrderEditPage() {
     return (
       <div className="space-y-6">
         <PageTitle
-          title="销售订单修改"
+          title="编辑销售订单"
           actions={<Button onClick={() => navigate("/sales-orders")}>返回列表</Button>}
         >
           未找到对应订单，请从销售订单列表重新进入。

@@ -477,7 +477,7 @@ export function SalesOrderItemsEditor({
       <div className="overflow-x-auto">
         <table className="min-w-[1440px] border-collapse text-sm">
           <thead className="bg-fill-2 text-left text-text-2">
-            <tr className="h-[42px]">
+            <tr className="h-[44px]">
               <th className="whitespace-nowrap border-b border-line-1 px-3">SKU</th>
               <th className="whitespace-nowrap border-b border-line-1 px-3">商品名称</th>
               <th className="whitespace-nowrap border-b border-line-1 px-3">规格</th>
@@ -543,7 +543,7 @@ export function SalesOrderItemsReadonly({
     <div className="overflow-x-auto">
       <table className="min-w-[980px] border-collapse text-sm lg:min-w-full">
         <thead className="bg-fill-2 text-left text-text-2">
-          <tr className="h-[42px]">
+          <tr className="h-[44px]">
             <th className="border-b border-line-1 px-3">SKU</th>
             <th className="border-b border-line-1 px-3">商品名称</th>
             <th className="border-b border-line-1 px-3">规格</th>
@@ -559,7 +559,7 @@ export function SalesOrderItemsReadonly({
         </thead>
         <tbody>
           {lines.map((line) => (
-            <tr key={line.id} className="border-b border-line-1">
+            <tr key={line.id} className="h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
               <td className="px-3 py-2.5">{line.sku}</td>
               <td className="px-3 py-2.5 font-medium text-text-1">{line.productName}</td>
               <td className="px-3 py-2.5">{line.spec}</td>
@@ -629,7 +629,7 @@ export function SalesOrderActionLogPanel({
         </thead>
         <tbody>
           {logs.map((log) => (
-            <tr key={log.id} className="border-b border-line-1">
+            <tr key={log.id} className="h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
               <td className="px-4 py-3 text-text-2">{log.time}</td>
               <td className="px-4 py-3">{log.user}</td>
               <td className="px-4 py-3 font-medium text-text-1">{log.action}</td>

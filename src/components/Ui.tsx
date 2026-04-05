@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from "react";
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ChevronsUpDown, Search } from "lucide-react";
+import { useState, useRef, useEffect, useCallback, createContext, useContext, type ReactNode } from "react";
+import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ChevronsUpDown, Search, X, Clock, Info, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
 import { cn } from "../utils/cn";
 
 export function PageTitle({
@@ -12,7 +12,7 @@ export function PageTitle({
   children?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-3 border-b border-line-1 pb-5 lg:flex-row lg:items-start lg:justify-between">
+    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
       <div>
         <h1 className="text-[22px] font-semibold text-text-1 lg:text-2xl">{title}</h1>
         {children ? <div className="mt-2 text-sm text-text-3">{children}</div> : null}
@@ -56,7 +56,7 @@ export function Button({
 
   const sizeClass =
     size === "icon"
-      ? "h-8 w-8 justify-center rounded-md px-0"
+      ? "h-8 w-8 justify-center rounded-md px-0 py-0"
       : size === "sm"
         ? "h-7 rounded-md px-3 text-[13px]"
         : "h-8 rounded-md px-3 text-[13px]";
@@ -131,70 +131,791 @@ export function Input({
   );
 }
 
+// ==================== Select 组件 ====================
+interface SelectOption {
+  value: string;
+  label: string;
+}
+
+interface SelectProps {
+  value: string;
+  onChange?: (value: string) => void;
+  options: string[];
+  placeholder?: string;
+  className?: string;
+  allowSearch?: boolean;
+  allowCreate?: boolean;
+}
+
 export function Select({
   value,
   onChange,
   options,
   placeholder = "请选择",
   className,
-}: {
-  value: string;
-  onChange?: (value: string) => void;
-  options: string[];
-  placeholder?: string;
-  className?: string;
-}) {
+  allowSearch = false,
+  allowCreate = false,
+}: SelectProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const selectOptions: SelectOption[] = options.map((opt) =>
+    typeof opt === "string" ? { value: opt, label: opt } : opt
+  );
+
+  const filteredOptions = selectOptions.filter((opt) =>
+    opt.label.toLowerCase().includes(searchValue.toLowerCase())
+  );
+
+  const showCreateOption =
+    allowCreate && searchValue && !selectOptions.some((opt) => opt.label === searchValue);
+
+  const displayedOptions = showCreateOption
+    ? [...filteredOptions, { value: searchValue, label: `创建 "${searchValue}"` }]
+    : filteredOptions;
+
+  useEffect(() => {
+    if (isOpen && allowSearch && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isOpen, allowSearch]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+        setSearchValue("");
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!isOpen) {
+      if (e.key === "Enter" || e.key === " ") {
+        setIsOpen(true);
+      }
+      return;
+    }
+
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setHighlightedIndex((prev) => Math.min(prev + 1, displayedOptions.length - 1));
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setHighlightedIndex((prev) => Math.max(prev - 1, 0));
+        break;
+      case "Enter":
+        e.preventDefault();
+        if (displayedOptions[highlightedIndex]) {
+          onChange?.(displayedOptions[highlightedIndex].value);
+          setIsOpen(false);
+          setSearchValue("");
+        }
+        break;
+      case "Escape":
+        setIsOpen(false);
+        setSearchValue("");
+        break;
+    }
+  };
+
+  const selectedOption = selectOptions.find((opt) => opt.value === value);
+
   return (
-    <label
-      className={cn(
-        "flex h-8 w-full cursor-pointer items-center justify-between rounded-md border border-line-2 bg-fill-1 px-3 text-[13px] text-text-2 transition focus-within:border-brand-6 focus-within:bg-white",
-        className,
-      )}
-    >
-      <select
-        value={value}
-        onChange={(event) => onChange?.(event.target.value)}
-        className="w-full appearance-none bg-transparent text-text-1 outline-none"
+    <div ref={containerRef} className={cn("relative", className)} onKeyDown={handleKeyDown}>
+      <div
+        className={cn(
+          "flex h-8 w-full cursor-pointer items-center justify-between rounded-md border border-line-2 bg-fill-1 px-3 text-[13px] transition focus-within:border-brand-6 focus-within:bg-white",
+          isOpen && "border-brand-6"
+        )}
+        onClick={() => setIsOpen(!isOpen)}
+        tabIndex={0}
       >
-        <option value="">{placeholder}</option>
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-      <ChevronDown size={16} className="shrink-0 text-text-3" />
-    </label>
+        <span className={selectedOption ? "text-text-1" : "text-text-3"}>
+          {selectedOption?.label || placeholder}
+        </span>
+        <ChevronDown
+          size={16}
+          className={cn("shrink-0 text-text-3 transition-transform", isOpen && "rotate-180")}
+        />
+      </div>
+
+      {isOpen && (
+        <div className="absolute left-0 top-full z-50 mt-1 w-full min-w-[200px] overflow-hidden rounded-md border border-line-2 bg-white py-1 shadow-dropdown">
+          {allowSearch && (
+            <div className="p-2">
+              <div className="relative">
+                <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-text-3" />
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={searchValue}
+                  onChange={(e) => {
+                    setSearchValue(e.target.value);
+                    setHighlightedIndex(0);
+                  }}
+                  placeholder="搜索..."
+                  className="h-7 w-full rounded border border-line-2 bg-fill-1 pl-7 pr-3 text-[13px] outline-none focus:border-brand-6"
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="max-h-[240px] overflow-y-auto">
+            {displayedOptions.length === 0 ? (
+              <div className="px-3 py-2 text-[13px] text-text-3">无匹配结果</div>
+            ) : (
+              displayedOptions.map((option, index) => (
+                <div
+                  key={option.value}
+                  className={cn(
+                    "cursor-pointer px-3 py-2 text-[13px]",
+                    option.value === value ? "bg-brand-1 text-brand-6" : "text-text-1",
+                    index === highlightedIndex && "bg-fill-2"
+                  )}
+                  onClick={() => {
+                    onChange?.(option.value);
+                    setIsOpen(false);
+                    setSearchValue("");
+                  }}
+                  onMouseEnter={() => setHighlightedIndex(index)}
+                >
+                  {option.label}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
-export function DateField({
-  value,
-  onChange,
-  placeholder = "请选择日期",
-  className,
-}: {
+// ==================== 日期选择组件 ====================
+interface DateFieldProps {
   value: string;
   onChange?: (value: string) => void;
   placeholder?: string;
   className?: string;
-}) {
+}
+
+export function DateField({ value, onChange, placeholder, className }: DateFieldProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const parseValue = (val: string) => {
+    if (!val) {
+      const now = new Date();
+      return { year: now.getFullYear(), month: now.getMonth() + 1, day: now.getDate() };
+    }
+    const [year, month, day] = val.split("/").map(Number);
+    return { year: year || 2024, month: month || 1, day: day || 1 };
+  };
+
+  const { year, month, day } = parseValue(value);
+  const [viewYear, setViewYear] = useState(year);
+  const [viewMonth, setViewMonth] = useState(month);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const getDaysInMonth = (y: number, m: number) => new Date(y, m, 0).getDate();
+  const firstDayOfMonth = new Date(viewYear, viewMonth - 1, 1).getDay();
+  const daysInMonth = getDaysInMonth(viewYear, viewMonth);
+
+  const days: (number | null)[] = [];
+  for (let i = 0; i < firstDayOfMonth; i++) days.push(null);
+  for (let i = 1; i <= daysInMonth; i++) days.push(i);
+
+  const years = Array.from({ length: 10 }, (_, i) => viewYear - 5 + i);
+  const months = Array.from({ length: 12 }, (_, i) => i + 1);
+
+  const handleSelectDay = (d: number) => {
+    onChange?.(`${viewYear}/${String(viewMonth).padStart(2, "0")}/${String(d).padStart(2, "0")}`);
+    setIsOpen(false);
+  };
+
   return (
-    <label
-      className={cn(
-        "flex h-8 items-center gap-2 rounded-md border border-line-2 bg-fill-1 px-3 text-[13px] transition focus-within:border-brand-6 focus-within:bg-white",
-        className,
+    <div ref={containerRef} className={cn("relative", className)}>
+      <div
+        className="flex h-8 w-full cursor-pointer items-center justify-between rounded-md border border-line-2 bg-fill-1 px-3 text-[13px] transition focus-within:border-brand-6 focus-within:bg-white"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span className={value ? "text-text-1" : "text-text-3"}>{value || placeholder || "请选择日期"}</span>
+        <CalendarDays size={16} className="text-text-3" />
+      </div>
+
+      {isOpen && (
+        <div className="absolute left-0 top-full z-50 mt-1 min-w-[280px] overflow-hidden rounded-lg border border-line-2 bg-white shadow-dropdown">
+          {/* 年月导航 */}
+          <div className="flex items-center justify-between border-b border-line-1 px-3 py-2">
+            <button type="button" onClick={() => setViewMonth((m) => (m === 1 ? 12 : m - 1))} className="flex h-7 w-7 items-center justify-center rounded hover:bg-fill-2">
+              <ChevronLeft size={16} />
+            </button>
+            <div className="flex gap-2">
+              <select value={viewYear} onChange={(e) => setViewYear(Number(e.target.value))} className="rounded border border-line-2 bg-fill-1 px-1 text-[13px]">
+                {years.map((y) => <option key={y} value={y}>{y}</option>)}
+              </select>
+              <select value={viewMonth} onChange={(e) => setViewMonth(Number(e.target.value))} className="rounded border border-line-2 bg-fill-1 px-1 text-[13px]">
+                {months.map((m) => <option key={m} value={m}>{m}月</option>)}
+              </select>
+            </div>
+            <button type="button" onClick={() => setViewMonth((m) => (m === 12 ? 1 : m + 1))} className="flex h-7 w-7 items-center justify-center rounded hover:bg-fill-2">
+              <ChevronRight size={16} />
+            </button>
+          </div>
+
+          {/* 星期标题 */}
+          <div className="grid grid-cols-7 border-b border-line-1 py-1.5 text-center text-[12px] text-text-3">
+            {["日", "一", "二", "三", "四", "五", "六"].map((d) => <div key={d}>{d}</div>)}
+          </div>
+
+          {/* 日期网格 */}
+          <div className="grid grid-cols-7 p-2">
+            {days.map((d, i) => {
+              const isSelected = d === day && viewMonth === month && viewYear === year;
+              const isToday = d === new Date().getDate() && viewMonth === new Date().getMonth() + 1 && viewYear === new Date().getFullYear();
+              return (
+                <div key={i} className="aspect-square p-0.5">
+                  {d && (
+                    <button
+                      type="button"
+                      onClick={() => handleSelectDay(d)}
+                      className={cn(
+                        "flex h-full w-full items-center justify-center rounded text-[13px]",
+                        isSelected && "bg-brand-6 text-white",
+                        !isSelected && isToday && "border border-brand-6 text-brand-6",
+                        !isSelected && !isToday && "hover:bg-fill-2"
+                      )}
+                    >
+                      {d}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* 底部操作 */}
+          <div className="flex justify-end gap-2 border-t border-line-1 px-3 py-2">
+            <button type="button" onClick={() => setIsOpen(false)} className="rounded px-3 py-1 text-[13px] hover:bg-fill-2">取消</button>
+            <button type="button" onClick={() => setIsOpen(false)} className="rounded bg-brand-6 px-3 py-1 text-[13px] text-white hover:bg-brand-7">确定</button>
+          </div>
+        </div>
       )}
-    >
-      <input
-        type="date"
-        value={value}
-        onChange={(event) => onChange?.(event.target.value)}
-        placeholder={placeholder}
-        className="w-full bg-transparent text-text-1 outline-none"
-      />
-      <CalendarDays size={16} className="text-text-3" />
-    </label>
+    </div>
+  );
+}
+
+// ==================== 日期范围选择组件 ====================
+interface DateRangeFieldProps {
+  value: { start: string; end: string };
+  onChange?: (value: { start: string; end: string }) => void;
+  placeholder?: string;
+  className?: string;
+}
+
+export function DateRangeField({ value, onChange, placeholder, className }: DateRangeFieldProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [mode, setMode] = useState<"start" | "end">("start");
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const parseValue = (val: string) => {
+    if (!val) {
+      const now = new Date();
+      return { year: now.getFullYear(), month: now.getMonth() + 1, day: now.getDate() };
+    }
+    const [year, month, day] = val.split("/").map(Number);
+    return { year: year || 2024, month: month || 1, day: day || 1 };
+  };
+
+  const startParsed = parseValue(value?.start || "");
+  const endParsed = parseValue(value?.end || "");
+  const [viewYear, setViewYear] = useState(startParsed.year);
+  const [viewMonth, setViewMonth] = useState(startParsed.month);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const getDaysInMonth = (y: number, m: number) => new Date(y, m, 0).getDate();
+  const firstDayOfMonth = new Date(viewYear, viewMonth - 1, 1).getDay();
+  const daysInMonth = getDaysInMonth(viewYear, viewMonth);
+
+  const days: (number | null)[] = [];
+  for (let i = 0; i < firstDayOfMonth; i++) days.push(null);
+  for (let i = 1; i <= daysInMonth; i++) days.push(i);
+
+  const years = Array.from({ length: 10 }, (_, i) => viewYear - 5 + i);
+  const months = Array.from({ length: 12 }, (_, i) => i + 1);
+
+  const handleSelectDay = (d: number) => {
+    const selected = `${viewYear}/${String(viewMonth).padStart(2, "0")}/${String(d).padStart(2, "0")}`;
+    if (mode === "start") {
+      onChange?.({ start: selected, end: value?.end || "" });
+      setMode("end");
+    } else {
+      onChange?.({ start: value?.start || "", end: selected });
+      setIsOpen(false);
+      setMode("start");
+    }
+  };
+
+  const isStartSelected = (d: number) =>
+    d === startParsed.day && viewMonth === startParsed.month && viewYear === startParsed.year;
+  const isEndSelected = (d: number) =>
+    d === endParsed.day && viewMonth === endParsed.month && viewYear === endParsed.year;
+
+  const displayValue = () => {
+    if (value?.start && value?.end) return `${value.start} ~ ${value.end}`;
+    if (value?.start) return `${value.start} ~`;
+    return "";
+  };
+
+  return (
+    <div ref={containerRef} className={cn("relative", className)}>
+      <div
+        className="flex h-8 w-full cursor-pointer items-center justify-between rounded-md border border-line-2 bg-fill-1 px-3 text-[13px] transition focus-within:border-brand-6 focus-within:bg-white"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span className={displayValue() ? "text-text-1" : "text-text-3"}>
+          {displayValue() || placeholder || "请选择日期范围"}
+        </span>
+        <CalendarDays size={16} className="text-text-3" />
+      </div>
+
+      {isOpen && (
+        <div className="absolute left-0 top-full z-50 mt-1 min-w-[320px] overflow-hidden rounded-lg border border-line-2 bg-white shadow-dropdown">
+          {/* 当前选择提示 */}
+          <div className="border-b border-line-1 px-3 py-2 text-center text-[13px] text-text-3">
+            {mode === "start" ? "请选择开始日期" : "请选择结束日期"}
+          </div>
+
+          {/* 年月导航 */}
+          <div className="flex items-center justify-between border-b border-line-1 px-3 py-2">
+            <button type="button" onClick={() => setViewMonth((m) => (m === 1 ? 12 : m - 1))} className="flex h-7 w-7 items-center justify-center rounded hover:bg-fill-2">
+              <ChevronLeft size={16} />
+            </button>
+            <div className="flex gap-2">
+              <select value={viewYear} onChange={(e) => setViewYear(Number(e.target.value))} className="rounded border border-line-2 bg-fill-1 px-1 text-[13px]">
+                {years.map((y) => <option key={y} value={y}>{y}</option>)}
+              </select>
+              <select value={viewMonth} onChange={(e) => setViewMonth(Number(e.target.value))} className="rounded border border-line-2 bg-fill-1 px-1 text-[13px]">
+                {months.map((m) => <option key={m} value={m}>{m}月</option>)}
+              </select>
+            </div>
+            <button type="button" onClick={() => setViewMonth((m) => (m === 12 ? 1 : m + 1))} className="flex h-7 w-7 items-center justify-center rounded hover:bg-fill-2">
+              <ChevronRight size={16} />
+            </button>
+          </div>
+
+          {/* 星期标题 */}
+          <div className="grid grid-cols-7 border-b border-line-1 py-1.5 text-center text-[12px] text-text-3">
+            {["日", "一", "二", "三", "四", "五", "六"].map((d) => <div key={d}>{d}</div>)}
+          </div>
+
+          {/* 日期网格 */}
+          <div className="grid grid-cols-7 p-2">
+            {days.map((d, i) => {
+              const startSel = isStartSelected(d || 0);
+              const endSel = isEndSelected(d || 0);
+              const isInRange = d !== null && !startSel && !endSel &&
+                value?.start && value?.end &&
+                new Date(`${viewYear}/${String(viewMonth).padStart(2, "0")}/${String(d).padStart(2, "0")}`) >= new Date(value.start) &&
+                new Date(`${viewYear}/${String(viewMonth).padStart(2, "0")}/${String(d).padStart(2, "0")}`) <= new Date(value.end);
+              return (
+                <div key={i} className="aspect-square p-0.5">
+                  {d && (
+                    <button
+                      type="button"
+                      onClick={() => handleSelectDay(d)}
+                      className={cn(
+                        "flex h-full w-full items-center justify-center rounded text-[13px]",
+                        startSel && "bg-brand-6 text-white",
+                        endSel && "bg-brand-6 text-white",
+                        isInRange && "bg-brand-1 text-brand-6",
+                        !startSel && !endSel && !isInRange && "hover:bg-fill-2"
+                      )}
+                    >
+                      {d}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* 底部操作 */}
+          <div className="flex justify-between border-t border-line-1 px-3 py-2">
+            <button
+              type="button"
+              onClick={() => {
+                onChange?.({ start: "", end: "" });
+                setIsOpen(false);
+                setMode("start");
+              }}
+              className="rounded px-3 py-1 text-[13px] hover:bg-fill-2"
+            >
+              清空
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsOpen(false);
+                setMode("start");
+              }}
+              className="rounded bg-brand-6 px-3 py-1 text-[13px] text-white hover:bg-brand-7"
+            >
+              确定
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==================== 时间选择组件 ====================
+interface TimeFieldProps {
+  value: string;
+  onChange?: (value: string) => void;
+  placeholder?: string;
+  className?: string;
+}
+
+export function TimeField({ value, onChange, placeholder, className }: TimeFieldProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const parseValue = (val: string) => {
+    if (!val) return { hour: 12, minute: 0 };
+    const [h, m] = val.split(":").map(Number);
+    return { hour: h || 0, minute: m || 0 };
+  };
+
+  const { hour, minute } = parseValue(value);
+  const [selectedHour, setSelectedHour] = useState(hour);
+  const [selectedMinute, setSelectedMinute] = useState(minute);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const hours = Array.from({ length: 24 }, (_, i) => i);
+  const minutes = [0, 15, 30, 45];
+
+  const handleConfirm = () => {
+    onChange?.(`${String(selectedHour).padStart(2, "0")}:${String(selectedMinute).padStart(2, "0")}`);
+    setIsOpen(false);
+  };
+
+  return (
+    <div ref={containerRef} className={cn("relative", className)}>
+      <div
+        className="flex h-8 w-full cursor-pointer items-center justify-between rounded-md border border-line-2 bg-fill-1 px-3 text-[13px] transition focus-within:border-brand-6 focus-within:bg-white"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span className={value ? "text-text-1" : "text-text-3"}>{value || placeholder || "请选择时间"}</span>
+        <Clock size={16} className="text-text-3" />
+      </div>
+
+      {isOpen && (
+        <div className="absolute left-0 top-full z-50 mt-1 min-w-[200px] overflow-hidden rounded-lg border border-line-2 bg-white shadow-dropdown">
+          {/* 时间网格 */}
+          <div className="flex border-b border-line-1">
+            <div className="flex-1 border-r border-line-1 p-2">
+              <div className="mb-1 text-center text-[12px] text-text-3">时</div>
+              <div className="grid grid-cols-6 gap-1">
+                {hours.map((h) => (
+                  <button
+                    key={h}
+                    type="button"
+                    onClick={() => setSelectedHour(h)}
+                    className={cn(
+                      "rounded py-1 text-[13px]",
+                      selectedHour === h ? "bg-brand-6 text-white" : "hover:bg-fill-2"
+                    )}
+                  >
+                    {String(h).padStart(2, "0")}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex-1 p-2">
+              <div className="mb-1 text-center text-[12px] text-text-3">分</div>
+              <div className="grid grid-cols-4 gap-1">
+                {minutes.map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setSelectedMinute(m)}
+                    className={cn(
+                      "rounded py-1 text-[13px]",
+                      selectedMinute === m ? "bg-brand-6 text-white" : "hover:bg-fill-2"
+                    )}
+                  >
+                    {String(m).padStart(2, "0")}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* 底部操作 */}
+          <div className="flex justify-end gap-2 border-t border-line-1 px-3 py-2">
+            <button type="button" onClick={() => setIsOpen(false)} className="rounded px-3 py-1 text-[13px] hover:bg-fill-2">取消</button>
+            <button type="button" onClick={handleConfirm} className="rounded bg-brand-6 px-3 py-1 text-[13px] text-white hover:bg-brand-7">确定</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==================== 日期时间选择组件 ====================
+interface DateTimeFieldProps {
+  value: string;
+  onChange?: (value: string) => void;
+  placeholder?: string;
+  className?: string;
+}
+
+export function DateTimeField({ value, onChange, placeholder, className }: DateTimeFieldProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [showTime, setShowTime] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const parseDate = (val: string) => {
+    if (!val) {
+      const now = new Date();
+      return { year: now.getFullYear(), month: now.getMonth() + 1, day: now.getDate() };
+    }
+    const datePart = val.split(" ")[0];
+    const [year, month, day] = datePart?.split("/").map(Number) || [2024, 1, 1];
+    return { year: year || 2024, month: month || 1, day: day || 1 };
+  };
+
+  const parseTime = (val: string) => {
+    if (!val) return { hour: 12, minute: 0 };
+    const timePart = val.split(" ")[1] || "12:00";
+    const [h, m] = timePart.split(":").map(Number);
+    return { hour: h || 0, minute: m || 0 };
+  };
+
+  const { year, month, day } = parseDate(value);
+  const { hour, minute } = parseTime(value);
+  const [viewYear, setViewYear] = useState(year);
+  const [viewMonth, setViewMonth] = useState(month);
+  const [selectedHour, setSelectedHour] = useState(hour);
+  const [selectedMinute, setSelectedMinute] = useState(minute);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+        setShowTime(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const getDaysInMonth = (y: number, m: number) => new Date(y, m, 0).getDate();
+  const firstDayOfMonth = new Date(viewYear, viewMonth - 1, 1).getDay();
+  const daysInMonth = getDaysInMonth(viewYear, viewMonth);
+
+  const days: (number | null)[] = [];
+  for (let i = 0; i < firstDayOfMonth; i++) days.push(null);
+  for (let i = 1; i <= daysInMonth; i++) days.push(i);
+
+  const years = Array.from({ length: 10 }, (_, i) => viewYear - 5 + i);
+  const months = Array.from({ length: 12 }, (_, i) => i + 1);
+  const hours = Array.from({ length: 24 }, (_, i) => i);
+  const minutes = [0, 15, 30, 45];
+
+  const handleSelectDay = (d: number) => {
+    const dateStr = `${viewYear}/${String(viewMonth).padStart(2, "0")}/${String(d).padStart(2, "0")}`;
+    const timeStr = `${String(selectedHour).padStart(2, "0")}:${String(selectedMinute).padStart(2, "0")}`;
+    onChange?.(`${dateStr} ${timeStr}`);
+    setShowTime(true);
+  };
+
+  const displayValue = () => {
+    if (!value) return "";
+    return value;
+  };
+
+  return (
+    <div ref={containerRef} className={cn("relative", className)}>
+      <div
+        className="flex h-8 w-full cursor-pointer items-center justify-between rounded-md border border-line-2 bg-fill-1 px-3 text-[13px] transition focus-within:border-brand-6 focus-within:bg-white"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span className={displayValue() ? "text-text-1" : "text-text-3"}>{displayValue() || placeholder || "请选择日期和时间"}</span>
+        <CalendarDays size={16} className="text-text-3" />
+      </div>
+
+      {isOpen && (
+        <div className="absolute left-0 top-full z-50 mt-1 min-w-[280px] overflow-hidden rounded-lg border border-line-2 bg-white shadow-dropdown">
+          {!showTime ? (
+            <>
+              {/* 年月导航 */}
+              <div className="flex items-center justify-between border-b border-line-1 px-3 py-2">
+                <button type="button" onClick={() => setViewMonth((m) => (m === 1 ? 12 : m - 1))} className="flex h-7 w-7 items-center justify-center rounded hover:bg-fill-2">
+                  <ChevronLeft size={16} />
+                </button>
+                <div className="flex gap-2">
+                  <select value={viewYear} onChange={(e) => setViewYear(Number(e.target.value))} className="rounded border border-line-2 bg-fill-1 px-1 text-[13px]">
+                    {years.map((y) => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                  <select value={viewMonth} onChange={(e) => setViewMonth(Number(e.target.value))} className="rounded border border-line-2 bg-fill-1 px-1 text-[13px]">
+                    {months.map((m) => <option key={m} value={m}>{m}月</option>)}
+                  </select>
+                </div>
+                <button type="button" onClick={() => setViewMonth((m) => (m === 12 ? 1 : m + 1))} className="flex h-7 w-7 items-center justify-center rounded hover:bg-fill-2">
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+
+              {/* 星期标题 */}
+              <div className="grid grid-cols-7 border-b border-line-1 py-1.5 text-center text-[12px] text-text-3">
+                {["日", "一", "二", "三", "四", "五", "六"].map((d) => <div key={d}>{d}</div>)}
+              </div>
+
+              {/* 日期网格 */}
+              <div className="grid grid-cols-7 p-2">
+                {days.map((d, i) => {
+                  const isSelected = d === day && viewMonth === month && viewYear === year;
+                  const isToday = d === new Date().getDate() && viewMonth === new Date().getMonth() + 1 && viewYear === new Date().getFullYear();
+                  return (
+                    <div key={i} className="aspect-square p-0.5">
+                      {d && (
+                        <button
+                          type="button"
+                          onClick={() => handleSelectDay(d)}
+                          className={cn(
+                            "flex h-full w-full items-center justify-center rounded text-[13px]",
+                            isSelected && "bg-brand-6 text-white",
+                            !isSelected && isToday && "border border-brand-6 text-brand-6",
+                            !isSelected && !isToday && "hover:bg-fill-2"
+                          )}
+                        >
+                          {d}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <>
+              {/* 切换回日期 */}
+              <div className="border-b border-line-1 px-3 py-2">
+                <button
+                  type="button"
+                  onClick={() => setShowTime(false)}
+                  className="text-[13px] text-brand-6 hover:text-brand-7"
+                >
+                  ← 返回日期
+                </button>
+              </div>
+
+              {/* 时间网格 */}
+              <div className="flex border-b border-line-1">
+                <div className="flex-1 border-r border-line-1 p-2">
+                  <div className="mb-1 text-center text-[12px] text-text-3">时</div>
+                  <div className="grid grid-cols-6 gap-1">
+                    {hours.map((h) => (
+                      <button
+                        key={h}
+                        type="button"
+                        onClick={() => setSelectedHour(h)}
+                        className={cn(
+                          "rounded py-1 text-[13px]",
+                          selectedHour === h ? "bg-brand-6 text-white" : "hover:bg-fill-2"
+                        )}
+                      >
+                        {String(h).padStart(2, "0")}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex-1 p-2">
+                  <div className="mb-1 text-center text-[12px] text-text-3">分</div>
+                  <div className="grid grid-cols-4 gap-1">
+                    {minutes.map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setSelectedMinute(m)}
+                        className={cn(
+                          "rounded py-1 text-[13px]",
+                          selectedMinute === m ? "bg-brand-6 text-white" : "hover:bg-fill-2"
+                        )}
+                      >
+                        {String(m).padStart(2, "0")}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* 底部操作 */}
+          <div className="flex justify-end gap-2 border-t border-line-1 px-3 py-2">
+            <button type="button" onClick={() => { setIsOpen(false); setShowTime(false); }} className="rounded px-3 py-1 text-[13px] hover:bg-fill-2">取消</button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!showTime) {
+                  const now = new Date();
+                  setViewYear(now.getFullYear());
+                  setViewMonth(now.getMonth() + 1);
+                }
+                const dateStr = showTime
+                  ? `${viewYear}/${String(viewMonth).padStart(2, "0")}/${String(day).padStart(2, "0")}`
+                  : `${viewYear}/${String(viewMonth).padStart(2, "0")}/01`;
+                const timeStr = `${String(selectedHour).padStart(2, "0")}:${String(selectedMinute).padStart(2, "0")}`;
+                onChange?.(`${dateStr} ${timeStr}`);
+                setIsOpen(false);
+                setShowTime(false);
+              }}
+              className="rounded bg-brand-6 px-3 py-1 text-[13px] text-white hover:bg-brand-7"
+            >
+              确定
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -319,7 +1040,7 @@ export function TabBar<T extends string>({
   className?: string;
 }) {
   return (
-    <div className={cn("mb-5 border-b border-line-2 px-1 pt-2", className)}>
+    <div className={cn("mb-2 border-b border-line-2 px-1 pt-2", className)}>
       <div className="flex flex-wrap items-center gap-5 px-1">
         {items.map((item) => (
           <button
@@ -364,11 +1085,13 @@ export function Checkbox({
   checked: controlledChecked,
   defaultChecked = false,
   onChange,
+  disabled = false,
   className,
 }: {
   checked?: boolean;
   defaultChecked?: boolean;
   onChange?: (checked: boolean) => void;
+  disabled?: boolean;
   className?: string;
 }) {
   const [internalChecked, setInternalChecked] = useState(defaultChecked);
@@ -378,6 +1101,7 @@ export function Checkbox({
   return (
     <div
       onClick={(e) => {
+        if (disabled) return;
         e.stopPropagation();
         if (!isControlled) {
           setInternalChecked(!checked);
@@ -389,6 +1113,7 @@ export function Checkbox({
         checked
           ? "border-brand-6 bg-brand-6 text-white"
           : "border-line-3 bg-white hover:border-brand-6",
+        disabled && "cursor-not-allowed opacity-50",
         className
       )}
     >
@@ -402,6 +1127,237 @@ export function Checkbox({
             strokeLinejoin="round"
           />
         </svg>
+      )}
+    </div>
+  );
+}
+
+// ==================== 单选框组件 ====================
+interface RadioOption {
+  value: string;
+  label: string;
+  disabled?: boolean;
+}
+
+interface RadioProps {
+  value?: string;
+  onChange?: (value: string) => void;
+  options: RadioOption[];
+  disabled?: boolean;
+  className?: string;
+}
+
+export function RadioGroup({ value, onChange, options, disabled = false, className }: RadioProps) {
+  return (
+    <div className={cn("flex flex-wrap gap-4", className)}>
+      {options.map((option) => {
+        const isSelected = value === option.value;
+        return (
+          <div
+            key={option.value}
+            onClick={() => {
+              if (disabled || option.disabled) return;
+              onChange?.(option.value);
+            }}
+            className={cn(
+              "flex items-center gap-2 cursor-pointer",
+              (disabled || option.disabled) && "cursor-not-allowed opacity-50"
+            )}
+          >
+            <div
+              className={cn(
+                "flex h-4 w-4 items-center justify-center rounded-full border transition-colors",
+                isSelected
+                  ? "border-brand-6 bg-brand-6"
+                  : "border-line-3 bg-white hover:border-brand-6"
+              )}
+            >
+              {isSelected && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
+            </div>
+            <span className="text-[13px] text-text-1">{option.label}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ==================== 开关组件 ====================
+interface SwitchProps {
+  checked?: boolean;
+  defaultChecked?: boolean;
+  onChange?: (checked: boolean) => void;
+  disabled?: boolean;
+  size?: "small" | "default";
+  className?: string;
+}
+
+export function Switch({
+  checked: controlledChecked,
+  defaultChecked = false,
+  onChange,
+  disabled = false,
+  size = "default",
+  className,
+}: SwitchProps) {
+  const [internalChecked, setInternalChecked] = useState(defaultChecked);
+  const isControlled = controlledChecked !== undefined;
+  const checked = isControlled ? controlledChecked : internalChecked;
+
+  const handleClick = () => {
+    if (disabled) return;
+    if (!isControlled) {
+      setInternalChecked(!checked);
+    }
+    onChange?.(!checked);
+  };
+
+  return (
+    <div
+      onClick={handleClick}
+      className={cn(
+        "relative cursor-pointer rounded-full transition-colors",
+        size === "small" ? "h-5 w-9" : "h-6 w-11",
+        checked ? "bg-brand-6" : "bg-line-3",
+        disabled && "cursor-not-allowed opacity-50",
+        className
+      )}
+    >
+      <div
+        className={cn(
+          "absolute top-0.5 rounded-full bg-white shadow transition-transform",
+          size === "small" ? "h-4 w-4" : "h-5 w-5",
+          checked
+            ? size === "small" ? "translate-x-4" : "translate-x-5"
+            : "translate-x-0.5"
+        )}
+      />
+    </div>
+  );
+}
+
+// ==================== 上传组件 ====================
+interface UploadFile {
+  id: string;
+  name: string;
+  size: number;
+  status: "uploading" | "success" | "error";
+  url?: string;
+  progress?: number;
+}
+
+interface UploadProps {
+  value?: UploadFile[];
+  onChange?: (files: UploadFile[]) => void;
+  accept?: string;
+  multiple?: boolean;
+  disabled?: boolean;
+  className?: string;
+}
+
+export function Upload({
+  value = [],
+  onChange,
+  accept,
+  multiple = false,
+  disabled = false,
+  className,
+}: UploadProps) {
+  const [isDragging, setIsDragging] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleFiles = (fileList: FileList) => {
+    const newFiles: UploadFile[] = Array.from(fileList).map((file, index) => ({
+      id: `${Date.now()}-${index}`,
+      name: file.name,
+      size: file.size,
+      status: "success" as const,
+      url: URL.createObjectURL(file),
+    }));
+    const updated = multiple ? [...value, ...newFiles] : newFiles.slice(0, 1);
+    onChange?.(updated);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (disabled) return;
+    handleFiles(e.dataTransfer.files);
+  };
+
+  const handleRemove = (id: string) => {
+    onChange?.(value.filter((f) => f.id !== id));
+  };
+
+  const formatSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  return (
+    <div className={cn("space-y-3", className)}>
+      {/* 上传区域 */}
+      <div
+        onClick={() => !disabled && inputRef.current?.click()}
+        onDragOver={(e) => { e.preventDefault(); if (!disabled) setIsDragging(true); }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={handleDrop}
+        className={cn(
+          "flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors cursor-pointer",
+          isDragging ? "border-brand-6 bg-brand-1" : "border-line-2 bg-fill-1 hover:border-brand-6 hover:bg-white",
+          disabled && "cursor-not-allowed opacity-50"
+        )}
+      >
+        <input
+          ref={inputRef}
+          type="file"
+          accept={accept}
+          multiple={multiple}
+          disabled={disabled}
+          onChange={(e) => e.target.files && handleFiles(e.target.files)}
+          className="hidden"
+        />
+        <div className="text-3xl text-text-3 mb-2">+</div>
+        <div className="text-[13px] text-text-2">
+          <span className="text-brand-6">点击上传</span> 或拖拽文件到此处
+        </div>
+        <div className="mt-1 text-[12px] text-text-3">
+          {accept ? `支持 ${accept} 格式` : "支持图片、文档等文件"}
+        </div>
+      </div>
+
+      {/* 文件列表 */}
+      {value.length > 0 && (
+        <div className="space-y-2">
+          {value.map((file) => (
+            <div
+              key={file.id}
+              className="flex items-center gap-3 rounded-lg border border-line-1 bg-fill-1 px-3 py-2"
+            >
+              <div className="flex-1 min-w-0">
+                <div className="truncate text-[13px] text-text-1">{file.name}</div>
+                <div className="text-[12px] text-text-3">{formatSize(file.size)}</div>
+              </div>
+              {file.status === "uploading" && (
+                <div className="text-[12px] text-text-3">{file.progress || 0}%</div>
+              )}
+              {file.status === "success" && (
+                <div className="text-[12px] text-success">上传成功</div>
+              )}
+              {file.status === "error" && (
+                <div className="text-[12px] text-danger">上传失败</div>
+              )}
+              <button
+                type="button"
+                onClick={() => handleRemove(file.id)}
+                className="text-text-3 hover:text-danger"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
@@ -461,7 +1417,7 @@ export function Pagination({
   const pages = Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1);
 
   return (
-    <div className={cn("mt-4 flex flex-col gap-3 text-sm text-text-2 lg:flex-row lg:items-center lg:justify-between", className)}>
+    <div className={cn("flex flex-col gap-3 text-sm text-text-2 lg:flex-row lg:items-center lg:justify-between", className)}>
       <div>
         {children}
         共计 {total} 条记录
@@ -540,14 +1496,214 @@ export function Pagination({
              type="text"
              value={currentPage}
              onChange={(e) => {
-               const num = Number(e.target.value);
-               if (num >= 1 && num <= totalPages) onPageChange(num);
+               const val = e.target.value;
+               const num = Number(val);
+               if (val === "" || (num >= 1 && num <= totalPages)) {
+                 if (val !== "") onPageChange(num);
+               }
+             }}
+             onKeyDown={(e) => {
+               if (e.key === "Enter") {
+                 const num = Number((e.target as HTMLInputElement).value);
+                 if (num >= 1 && num <= totalPages) onPageChange(num);
+               }
              }}
              className="h-8 w-12 rounded border border-line-2 text-center text-text-2 focus:border-brand-6 outline-none transition"
            />
            <span className="text-text-2">页</span>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ==================== 全局消息提示组件 ====================
+type MessageType = "info" | "normal" | "success" | "warning" | "error";
+
+interface MessageInstance {
+  id: number;
+  type: MessageType;
+  content: ReactNode;
+  duration: number;
+  closable: boolean;
+  onClose?: () => void;
+}
+
+interface MessageContextType {
+  addMessage: (msg: Omit<MessageInstance, "id">) => number;
+  removeMessage: (id: number) => void;
+}
+
+const MessageContext = createContext<MessageContextType | null>(null);
+
+export function useMessage() {
+  const context = useContext(MessageContext);
+  if (!context) {
+    // 如果没有 provider，返回一个空的实现
+    const noop = () => 0;
+    return { addMessage: noop, removeMessage: noop, success: noop, error: noop, warning: noop, info: noop, normal: noop };
+  }
+  return context;
+}
+
+// 全局消息列表
+let messageList: MessageInstance[] = [];
+let messageCount = 0;
+let setMessageListFn: React.Dispatch<React.SetStateAction<MessageInstance[]>> | null = null;
+
+function updateMessageList(updater: React.SetStateAction<MessageInstance[]>) {
+  if (setMessageListFn) {
+    setMessageListFn(updater);
+  }
+}
+
+function generateId() {
+  return ++messageCount;
+}
+
+export const Message: MessageContextType & {
+  info: (content: ReactNode, duration?: number) => number;
+  normal: (content: ReactNode, duration?: number) => number;
+  success: (content: ReactNode, duration?: number) => number;
+  warning: (content: ReactNode, duration?: number) => number;
+  error: (content: ReactNode, duration?: number) => number;
+  open: (options: { type?: MessageType; content: ReactNode; duration?: number; closable?: boolean; onClose?: () => void }) => number;
+  remove: (id: number) => void;
+  removeAll: () => void;
+} = {
+  addMessage: (msg) => {
+    const id = generateId();
+    updateMessageList((list) => [...list, { ...msg, id }]);
+    return id;
+  },
+
+  removeMessage: (id) => {
+    updateMessageList((list) => list.filter((msg) => msg.id !== id));
+  },
+
+  info: (content, duration = 3000) => {
+    return Message.addMessage({ type: "info", content, duration, closable: false });
+  },
+
+  normal: (content, duration = 3000) => {
+    return Message.addMessage({ type: "normal", content, duration, closable: false });
+  },
+
+  success: (content, duration = 3000) => {
+    return Message.addMessage({ type: "success", content, duration, closable: false });
+  },
+
+  warning: (content, duration = 3000) => {
+    return Message.addMessage({ type: "warning", content, duration, closable: false });
+  },
+
+  error: (content, duration = 3000) => {
+    return Message.addMessage({ type: "error", content, duration, closable: false });
+  },
+
+  open: ({ type = "normal", content, duration = 3000, closable = false, onClose }) => {
+    return Message.addMessage({ type, content, duration, closable, onClose });
+  },
+
+  remove: (id) => {
+    Message.removeMessage(id);
+  },
+
+  removeAll: () => {
+    updateMessageList([]);
+  },
+};
+
+// 消息提示框渲染组件（需要在 App 中放置一次）
+export function MessageContainer() {
+  const [list, setList] = useState<MessageInstance[]>([]);
+
+  useEffect(() => {
+    messageList = list;
+  }, [list]);
+
+  useEffect(() => {
+    setMessageListFn = setList;
+    return () => {
+      setMessageListFn = null;
+    };
+  }, []);
+
+  // 定时关闭
+  useEffect(() => {
+    const timers = list.map((msg) => {
+      if (msg.duration > 0 && !msg.closable) {
+        return setTimeout(() => {
+          Message.removeMessage(msg.id);
+        }, msg.duration);
+      }
+      return null;
+    });
+
+    return () => {
+      timers.forEach((timer) => timer && clearTimeout(timer));
+    };
+  }, [list]);
+
+  if (list.length === 0) return null;
+
+  return (
+    <div className="fixed top-4 left-1/2 z-[9999] -translate-x-1/2 flex flex-col items-center gap-2">
+      {list.map((msg) => (
+        <MessageItem key={msg.id} msg={msg} onRemove={() => Message.removeMessage(msg.id)} />
+      ))}
+    </div>
+  );
+}
+
+function MessageItem({ msg, onRemove }: { msg: MessageInstance; onRemove: () => void }) {
+  const typeConfig = {
+    info: {
+      bg: "bg-brand-6",
+      icon: <Info size={18} className="text-white" />,
+    },
+    normal: {
+      bg: "bg-text-2",
+      icon: <Info size={18} className="text-white" />,
+    },
+    success: {
+      bg: "bg-success",
+      icon: <CheckCircle size={18} className="text-white" />,
+    },
+    warning: {
+      bg: "bg-warning",
+      icon: <AlertTriangle size={18} className="text-white" />,
+    },
+    error: {
+      bg: "bg-danger",
+      icon: <XCircle size={18} className="text-white" />,
+    },
+  };
+
+  const config = typeConfig[msg.type];
+
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-3 rounded-lg px-4 py-3 shadow-lg min-w-[280px] max-w-[480px]",
+        config.bg
+      )}
+      style={{ animation: "fadeUp 0.3s ease-out" }}
+    >
+      {config.icon}
+      <div className="flex-1 text-sm text-white">{msg.content}</div>
+      {msg.closable && (
+        <button
+          type="button"
+          onClick={() => {
+            msg.onClose?.();
+            onRemove();
+          }}
+          className="text-white/80 hover:text-white"
+        >
+          <X size={16} />
+        </button>
+      )}
     </div>
   );
 }

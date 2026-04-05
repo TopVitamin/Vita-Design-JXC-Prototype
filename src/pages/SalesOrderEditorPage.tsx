@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, HintBox } from "../components/Ui";
+import { Button, HintBox, PageTitle } from "../components/Ui";
 import {
   SalesOrderBasicForm,
   SalesOrderItemsEditor,
@@ -135,14 +135,16 @@ export function SalesOrderEditorPage({
   };
 
   const handleSubmit = () => {
+    const now = new Date();
+    const formattedDate = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, "0")}/${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
     setRecord((current) => ({
       ...current,
       status: "待审核",
       statusTone: "orange",
       approvalStatus: mode === "create" ? "待销售主管审核" : "待重新审核",
-      updatedAt: "2025/04/03 15:36",
+      updatedAt: formattedDate,
     }));
-    setMessage(mode === "create" ? "订单已提交。" : "修改已提交。");
+    setMessage(mode === "create" ? "订单已提交。" : "编辑已提交。");
   };
 
   const handleReset = () => {
@@ -152,6 +154,7 @@ export function SalesOrderEditorPage({
 
   return (
     <div className="space-y-4">
+      <PageTitle title={isCreateMode ? "新增销售订单" : "编辑销售订单"} />
       {message ? <HintBox>{message}</HintBox> : null}
 
       <div className="space-y-4">

@@ -1,6 +1,8 @@
-import { startTransition, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { startTransition, useDeferredValue, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button, DateField, FilterActions, FilterField, FormField, HintBox, Input, PageTitle, Pagination, SearchInput, Select, StatusPill, TabBar, TableSortHeader, TextArea } from "../components/Ui";
+import { Drawer } from "../components/Drawer";
+import { FilterItem } from "../components/FilterItem";
 import { SalesOrderSection } from "../components/SalesOrderWorkspace";
 import {
   configModuleViews,
@@ -22,6 +24,7 @@ import {
 } from "../data/modulePages";
 import type { ViewKey } from "../data/mock";
 import { cn } from "../utils/cn";
+import { compareRecord, normalizeSortValue } from "../utils/sort";
 
 export function GenericCrudListPage({ view }: { view: ViewKey }) {
   const navigate = useNavigate();
@@ -80,7 +83,7 @@ export function GenericCrudListPage({ view }: { view: ViewKey }) {
   }, [currentPage, filteredRows, pageSize]);
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col gap-4">
       {module.statusTabs ? (
         <TabBar
           items={module.statusTabs.map((tab) => ({ key: tab, label: tab }))}
@@ -89,7 +92,7 @@ export function GenericCrudListPage({ view }: { view: ViewKey }) {
         />
       ) : null}
 
-      <div className="flex flex-wrap items-end gap-4 rounded-lg border border-line-1 bg-[rgba(247,248,250,0.5)] px-4 py-3.5 text-[13px]">
+      <div className="flex flex-wrap items-end gap-5 rounded-lg border border-line-1 bg-white px-4 py-3.5 text-[13px]">
         {module.filters.map((filter) => (
           <FilterItem
             key={filter.key}
@@ -115,7 +118,7 @@ export function GenericCrudListPage({ view }: { view: ViewKey }) {
             <thead className="bg-fill-2 text-left text-text-2">
               <tr className="h-[44px]">
                 {module.columns.map((column) => (
-                  <th key={column.key} className={cn("border-b border-line-1 px-4", column.align === "right" && "text-right")}>
+                  <th key={column.key} className={cn("border-b border-r border-line-1 px-4", column.align === "right" && "text-right")}>
                     <TableSortHeader
                       label={column.label}
                       sortKey={column.key}
@@ -125,21 +128,21 @@ export function GenericCrudListPage({ view }: { view: ViewKey }) {
                     />
                   </th>
                 ))}
-                <th className="border-b border-line-1 px-4 text-center">操作</th>
+                <th className="min-w-[120px] whitespace-nowrap border-b border-line-1 px-4 text-center">操作</th>
               </tr>
             </thead>
             <tbody>
               {paginatedRows.map((record) => (
-                <tr key={record.id} className="h-[44px] border-b border-line-1 text-text-2 hover:bg-[#fafcff]">
+                <tr key={record.id} className="h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
                   {module.columns.map((column) => (
-                    <td key={column.key} className={cn("px-4 py-2.5", column.align === "right" && "text-right")}>
+                    <td key={column.key} className={cn("border-r border-line-1 px-4", column.align === "right" && "text-right")}>
                       {renderColumnValue(record, column)}
                     </td>
                   ))}
-                  <td className="px-4 py-2.5">
+                  <td className="min-w-[120px] whitespace-nowrap px-4">
                     <div className="flex items-center justify-center gap-2">
                       <Button size="sm" onClick={() => navigate(`/${view}/${record.id}`)}>详情</Button>
-                      <Button size="sm" onClick={() => navigate(`/${view}/${record.id}/edit`)}>修改</Button>
+                      <Button size="sm" onClick={() => navigate(`/${view}/${record.id}/edit`)}>编辑</Button>
                     </div>
                   </td>
                 </tr>
@@ -148,18 +151,18 @@ export function GenericCrudListPage({ view }: { view: ViewKey }) {
           </table>
         </div>
         </div>
-      </div>
 
-      <Pagination
-        total={filteredRows.length}
-        currentPage={currentPage}
-        pageSize={pageSize}
-        onPageChange={setCurrentPage}
-        onPageSizeChange={(size) => {
-          setPageSize(size);
-          setCurrentPage(1);
-        }}
-      />
+        <Pagination
+          total={filteredRows.length}
+          currentPage={currentPage}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setCurrentPage(1);
+          }}
+        />
+      </div>
     </div>
   );
 }
@@ -258,6 +261,7 @@ export function GenericCrudEditorPage({
 
   return (
     <div className="space-y-4">
+      <PageTitle title={mode === "create" ? `新增${module.singular}` : `编辑${module.singular}`} />
       {message ? <HintBox>{message}</HintBox> : null}
 
       <div className="space-y-4">
@@ -500,69 +504,101 @@ export function GenericQueryPage({ view }: { view: ViewKey }) {
   const [keyword, setKeyword] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [selectFilters, setSelectFilters] = useState<Record<string, string>>({});
+  const [dateRangeFilters, setDateRangeFilters] = useState<Record<string, { start: string; end: string }>>({});
   const deferredKeyword = useDeferredValue(keyword);
 
   if (!module || !queryModuleViews.includes(view)) return null;
 
   const filteredRows = useMemo(() => {
     const normalized = deferredKeyword.trim().toLowerCase();
-    if (!normalized) return module.rows;
-    return module.rows.filter((row) => Object.values(row).join(" ").toLowerCase().includes(normalized));
-  }, [deferredKeyword, module.rows]);
+    let rows = module.rows;
+
+    // 关键词过滤
+    if (normalized) {
+      rows = rows.filter((row) => Object.values(row).join(" ").toLowerCase().includes(normalized));
+    }
+
+    // 下拉筛选
+    for (const [key, value] of Object.entries(selectFilters)) {
+      if (!value || value.startsWith("全部")) continue;
+      rows = rows.filter((row) => String(row[key] ?? "") === value);
+    }
+
+    return rows;
+  }, [deferredKeyword, module.rows, selectFilters]);
 
   const paginatedRows = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     return filteredRows.slice(start, start + pageSize);
   }, [currentPage, filteredRows, pageSize]);
 
+  const handleReset = () => {
+    setKeyword("");
+    setSelectFilters({});
+    setDateRangeFilters({});
+    setCurrentPage(1);
+  };
+
   return (
-    <div className="flex flex-col">
-      <div className="flex flex-wrap items-end gap-4 rounded-lg border border-line-1 bg-[rgba(247,248,250,0.5)] px-4 py-3.5 text-[13px]">
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-end gap-5 rounded-lg border border-line-1 bg-white px-4 py-3.5 text-[13px]">
         {module.filters.map((filter) => (
-          <FilterItem key={filter.key} filter={filter} keyword={keyword} onKeywordChange={setKeyword} value="" onValueChange={() => {}} />
+          <FilterItem
+            key={filter.key}
+            filter={filter}
+            keyword={keyword}
+            onKeywordChange={setKeyword}
+            value={selectFilters[filter.key] ?? ""}
+            onValueChange={(value) => setSelectFilters((current) => ({ ...current, [filter.key]: value }))}
+            dateRangeValue={dateRangeFilters[filter.key]}
+            onDateRangeChange={(range) => setDateRangeFilters((current) => ({ ...current, [filter.key]: range }))}
+          />
         ))}
-        <FilterActions onSecondaryClick={() => setKeyword("")} />
+        <FilterActions onSecondaryClick={handleReset} />
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-2.5">
-        <Button>导出</Button>
-      </div>
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Button>导出</Button>
+        </div>
 
-      <div className="mt-3 overflow-hidden rounded-xl border border-line-1 shadow-soft">
-        <div className="overflow-x-auto">
-          <table className="min-w-[980px] border-collapse text-sm lg:min-w-full">
-            <thead className="bg-fill-2 text-left text-text-2">
-              <tr className="h-[44px]">
-                {module.columns.map((column) => (
-                  <th key={column.key} className={cn("border-b border-line-1 px-4", column.align === "right" && "text-right")}>{column.label}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedRows.map((row, index) => (
-                <tr key={`${index}-${row[module.columns[0].key]}`} className="h-[44px] border-b border-line-1 text-text-2 hover:bg-[#fafcff]">
+        <div className="overflow-hidden rounded-xl border border-line-1 shadow-soft">
+          <div className="overflow-x-auto">
+            <table className="min-w-[1100px] border-collapse text-sm lg:min-w-full">
+              <thead className="bg-fill-2 text-left text-text-2">
+                <tr className="h-[44px]">
                   {module.columns.map((column) => (
-                    <td key={column.key} className={cn("px-4 py-2.5", column.align === "right" && "text-right")}>
-                      {renderGenericValue(row[column.key], column.kind, row[column.toneKey ?? "tone"] as Tone | undefined)}
-                    </td>
+                    <th key={column.key} className={cn("border-b border-r border-line-1 px-4", column.align === "right" && "text-right")}>{column.label}</th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {paginatedRows.map((row, index) => (
+                  <tr key={`${index}-${row[module.columns[0].key]}`} className="h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
+                    {module.columns.map((column) => (
+                      <td key={column.key} className={cn("border-r border-line-1 px-4", column.align === "right" && "text-right", column.kind === "status" && "min-w-[100px] whitespace-nowrap")}>
+                        {renderGenericValue(row[column.key], column.kind, row[column.toneKey ?? "tone"] as Tone | undefined)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
 
-      <Pagination
-        total={filteredRows.length}
-        currentPage={currentPage}
-        pageSize={pageSize}
-        onPageChange={setCurrentPage}
-        onPageSizeChange={(size) => {
-          setPageSize(size);
-          setCurrentPage(1);
-        }}
-      />
+        <Pagination
+          total={filteredRows.length}
+          currentPage={currentPage}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setCurrentPage(1);
+          }}
+        />
+      </div>
     </div>
   );
 }
@@ -615,13 +651,493 @@ export function GenericFormPage({ view }: { view: ViewKey }) {
 
 export function GenericConfigPage({ view }: { view: ViewKey }) {
   const module = getModuleDefinition(view) as ConfigModuleDefinition | undefined;
+  const [selectedTab, setSelectedTab] = useState("");
+
+  // Drawer states
+  const [isUserDrawerOpen, setIsUserDrawerOpen] = useState(false);
+  const [isRoleDrawerOpen, setIsRoleDrawerOpen] = useState(false);
+  const [isRuleDrawerOpen, setIsRuleDrawerOpen] = useState(false);
+  const [isTemplateDrawerOpen, setIsTemplateDrawerOpen] = useState(false);
+
+  // Form states
+  const [newUserForm, setNewUserForm] = useState({ username: "", name: "", role: "", department: "", status: "启用" });
+  const [newRoleForm, setNewRoleForm] = useState({ roleName: "", roleCode: "", description: "" });
+  const [newRuleForm, setNewRuleForm] = useState({ docType: "", prefix: "", dateFormat: "YYYYMMDD", sequence: "4位", resetType: "日归零", status: "启用" });
+  const [newTemplateForm, setNewTemplateForm] = useState({ docType: "", templateName: "", paperSize: "A4" });
+
+  useEffect(() => {
+    // Set default tab based on module type
+    if (module) {
+      if (module.users) setSelectedTab("users");
+      else if (module.rules) setSelectedTab("rules");
+      else if (module.templates) setSelectedTab("templates");
+      else if (module.logs && view === "operation-log") setSelectedTab("logs");
+    }
+  }, [module, view]);
+
   if (!module || !configModuleViews.includes(view)) return null;
 
+  // 用户与权限页面
+  if (view === "user-permission") {
+    return (
+      <div className="space-y-4">
+        {/* 统计卡片 */}
+        <div className="grid gap-4 xl:grid-cols-4">
+          <div className="rounded-xl border border-line-1 bg-white px-4 py-3 shadow-card">
+            <div className="text-[12px] text-text-3">用户总数</div>
+            <div className="mt-1 text-2xl font-semibold text-text-1">{module.users?.length ?? 0}</div>
+          </div>
+          <div className="rounded-xl border border-line-1 bg-white px-4 py-3 shadow-card">
+            <div className="text-[12px] text-text-3">启用中</div>
+            <div className="mt-1 text-2xl font-semibold text-success">{module.users?.filter(u => u.status === "启用").length ?? 0}</div>
+          </div>
+          <div className="rounded-xl border border-line-1 bg-white px-4 py-3 shadow-card">
+            <div className="text-[12px] text-text-3">角色数量</div>
+            <div className="mt-1 text-2xl font-semibold text-text-1">{module.roles?.length ?? 0}</div>
+          </div>
+          <div className="rounded-xl border border-line-1 bg-white px-4 py-3 shadow-card">
+            <div className="text-[12px] text-text-3">今日登录</div>
+            <div className="mt-1 text-2xl font-semibold text-brand-6">4</div>
+          </div>
+        </div>
+
+        {/* Tab切换 */}
+        <TabBar
+          items={[
+            { key: "users", label: "用户列表" },
+            { key: "roles", label: "角色配置" },
+            { key: "permissions", label: "权限策略" },
+          ]}
+          activeKey={selectedTab || "users"}
+          onChange={(tab) => setSelectedTab(tab)}
+        />
+
+        {/* 用户列表 */}
+        {selectedTab === "users" && (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Button tone="primary" onClick={() => setIsUserDrawerOpen(true)}>新增用户</Button>
+              <Button>导出</Button>
+            </div>
+            <div className="overflow-hidden rounded-xl border border-line-1 shadow-soft">
+              <div className="overflow-x-auto">
+                <table className="min-w-[900px] border-collapse text-sm lg:min-w-full">
+                  <thead className="bg-fill-2 text-left text-text-2">
+                    <tr className="h-[44px]">
+                      <th className="border-b border-r border-line-1 px-4">用户名</th>
+                      <th className="border-b border-r border-line-1 px-4">姓名</th>
+                      <th className="border-b border-r border-line-1 px-4">角色</th>
+                      <th className="border-b border-r border-line-1 px-4">部门</th>
+                      <th className="border-b border-r border-line-1 px-4">状态</th>
+                      <th className="border-b border-r border-line-1 px-4">最后登录</th>
+                      <th className="min-w-[120px] whitespace-nowrap border-b border-line-1 px-4 text-center">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {module.users?.map((user) => (
+                      <tr key={user.id} className="h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
+                        <td className="border-r border-line-1 px-4 text-brand-6">{user.username}</td>
+                        <td className="border-r border-line-1 px-4 text-text-1">{user.name}</td>
+                        <td className="border-r border-line-1 px-4">
+                          <StatusPill tone={(user.roleTone as Tone) ?? "gray"}>{user.role}</StatusPill>
+                        </td>
+                        <td className="border-r border-line-1 px-4">{user.department}</td>
+                        <td className="border-r border-line-1 px-4">
+                          <StatusPill tone={(user.statusTone as Tone) ?? "gray"}>{user.status}</StatusPill>
+                        </td>
+                        <td className="border-r border-line-1 px-4">{user.lastLogin}</td>
+                        <td className="min-w-[120px] whitespace-nowrap px-4">
+                          <div className="flex items-center justify-center gap-2">
+                            <Button size="sm">编辑</Button>
+                            <Button size="sm">{user.status === "启用" ? "禁用" : "启用"}</Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 角色配置 */}
+        {selectedTab === "roles" && (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Button tone="primary" onClick={() => setIsRoleDrawerOpen(true)}>新增角色</Button>
+            </div>
+            <div className="overflow-hidden rounded-xl border border-line-1 shadow-soft">
+              <div className="overflow-x-auto">
+                <table className="min-w-[700px] border-collapse text-sm lg:min-w-full">
+                  <thead className="bg-fill-2 text-left text-text-2">
+                    <tr className="h-[44px]">
+                      <th className="border-b border-r border-line-1 px-4">角色名称</th>
+                      <th className="border-b border-r border-line-1 px-4">角色编码</th>
+                      <th className="border-b border-r border-line-1 px-4">用户数</th>
+                      <th className="border-b border-r border-line-1 px-4">说明</th>
+                      <th className="min-w-[120px] whitespace-nowrap border-b border-line-1 px-4 text-center">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {module.roles?.map((role) => (
+                      <tr key={role.id} className="h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
+                        <td className="border-r border-line-1 px-4 font-medium text-text-1">{role.roleName}</td>
+                        <td className="border-r border-line-1 px-4">{role.roleCode}</td>
+                        <td className="border-r border-line-1 px-4">{role.userCount}</td>
+                        <td className="border-r border-line-1 px-4">{role.description}</td>
+                        <td className="min-w-[120px] whitespace-nowrap px-4">
+                          <div className="flex items-center justify-center gap-2">
+                            <Button size="sm">编辑</Button>
+                            <Button size="sm">权限</Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 权限策略 */}
+        {selectedTab === "permissions" && (
+          <SalesOrderSection title="权限策略">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="rounded-xl border border-line-1 bg-fill-2 px-4 py-3 shadow-card">
+                <div className="text-[12px] text-text-3">菜单权限</div>
+                <div className="mt-1 text-[14px] font-medium text-text-1">按角色配置</div>
+              </div>
+              <div className="rounded-xl border border-line-1 bg-fill-2 px-4 py-3 shadow-card">
+                <div className="text-[12px] text-text-3">数据权限</div>
+                <div className="mt-1 text-[14px] font-medium text-text-1">按组织/仓库隔离</div>
+              </div>
+              <div className="rounded-xl border border-line-1 bg-fill-2 px-4 py-3 shadow-card">
+                <div className="text-[12px] text-text-3">审批权限</div>
+                <div className="mt-1 text-[14px] font-medium text-text-1">按单据流转控制</div>
+              </div>
+            </div>
+          </SalesOrderSection>
+        )}
+
+        {module.logs ? (
+          <SalesOrderSection title="最近操作">
+            <ModuleLogTable logs={module.logs} />
+          </SalesOrderSection>
+        ) : null}
+
+        {/* 新增用户Drawer */}
+        <Drawer
+          isOpen={isUserDrawerOpen}
+          onClose={() => setIsUserDrawerOpen(false)}
+          title="新增用户"
+          footer={
+            <>
+              <Button onClick={() => setIsUserDrawerOpen(false)}>取消</Button>
+              <Button tone="primary" onClick={() => setIsUserDrawerOpen(false)}>保存</Button>
+            </>
+          }
+        >
+          <div className="grid gap-x-4 gap-y-5 md:grid-cols-2">
+            <ConfigDrawerField label="用户名">
+              <Input value={newUserForm.username} onChange={(v) => setNewUserForm((f) => ({ ...f, username: v }))} placeholder="请输入" />
+            </ConfigDrawerField>
+            <ConfigDrawerField label="姓名">
+              <Input value={newUserForm.name} onChange={(v) => setNewUserForm((f) => ({ ...f, name: v }))} placeholder="请输入" />
+            </ConfigDrawerField>
+            <ConfigDrawerField label="角色">
+              <Select value={newUserForm.role} onChange={(v) => setNewUserForm((f) => ({ ...f, role: v }))} options={["管理员", "业务员", "仓库员", "财务"]} placeholder="选择角色" />
+            </ConfigDrawerField>
+            <ConfigDrawerField label="部门">
+              <Select value={newUserForm.department} onChange={(v) => setNewUserForm((f) => ({ ...f, department: v }))} options={["销售部", "仓储部", "管理层", "财务部"]} placeholder="选择部门" />
+            </ConfigDrawerField>
+            <ConfigDrawerField label="状态">
+              <Select value={newUserForm.status} onChange={(v) => setNewUserForm((f) => ({ ...f, status: v }))} options={["启用", "停用"]} placeholder="选择状态" />
+            </ConfigDrawerField>
+          </div>
+        </Drawer>
+
+        {/* 新增角色Drawer */}
+        <Drawer
+          isOpen={isRoleDrawerOpen}
+          onClose={() => setIsRoleDrawerOpen(false)}
+          title="新增角色"
+          footer={
+            <>
+              <Button onClick={() => setIsRoleDrawerOpen(false)}>取消</Button>
+              <Button tone="primary" onClick={() => setIsRoleDrawerOpen(false)}>保存</Button>
+            </>
+          }
+        >
+          <div className="grid gap-x-4 gap-y-5 md:grid-cols-2">
+            <ConfigDrawerField label="角色名称">
+              <Input value={newRoleForm.roleName} onChange={(v) => setNewRoleForm((f) => ({ ...f, roleName: v }))} placeholder="请输入" />
+            </ConfigDrawerField>
+            <ConfigDrawerField label="角色编码">
+              <Input value={newRoleForm.roleCode} onChange={(v) => setNewRoleForm((f) => ({ ...f, roleCode: v }))} placeholder="请输入" />
+            </ConfigDrawerField>
+            <ConfigDrawerField label="说明" className="md:col-span-2">
+              <TextArea value={newRoleForm.description} onChange={(v) => setNewRoleForm((f) => ({ ...f, description: v }))} placeholder="请输入" />
+            </ConfigDrawerField>
+          </div>
+        </Drawer>
+      </div>
+    );
+  }
+
+  // 单据编号页面
+  if (view === "document-number") {
+    return (
+      <div className="space-y-4">
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Button tone="primary" onClick={() => setIsRuleDrawerOpen(true)}>新增规则</Button>
+            <Button>导出</Button>
+          </div>
+          <div className="overflow-hidden rounded-xl border border-line-1 shadow-soft">
+            <div className="overflow-x-auto">
+              <table className="min-w-[800px] border-collapse text-sm lg:min-w-full">
+                <thead className="bg-fill-2 text-left text-text-2">
+                  <tr className="h-[44px]">
+                    <th className="border-b border-r border-line-1 px-4">单据类型</th>
+                    <th className="border-b border-r border-line-1 px-4">前缀</th>
+                    <th className="border-b border-r border-line-1 px-4">日期格式</th>
+                    <th className="border-b border-r border-line-1 px-4">序号位数</th>
+                    <th className="border-b border-r border-line-1 px-4">重置方式</th>
+                    <th className="border-b border-r border-line-1 px-4">状态</th>
+                    <th className="min-w-[100px] whitespace-nowrap border-b border-line-1 px-4 text-center">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {module.rules?.map((rule) => (
+                    <tr key={rule.id} className="h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
+                      <td className="border-r border-line-1 px-4 font-medium text-text-1">{rule.docType}</td>
+                      <td className="border-r border-line-1 px-4">{rule.prefix}</td>
+                      <td className="border-r border-line-1 px-4">{rule.dateFormat}</td>
+                      <td className="border-r border-line-1 px-4">{rule.sequence}</td>
+                      <td className="border-r border-line-1 px-4">{rule.resetType}</td>
+                      <td className="border-r border-line-1 px-4">
+                        <StatusPill tone={(rule.statusTone as Tone) ?? "gray"}>{rule.status}</StatusPill>
+                      </td>
+                      <td className="min-w-[100px] whitespace-nowrap px-4">
+                        <div className="flex items-center justify-center gap-2">
+                          <Button size="sm">编辑</Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {module.logs ? (
+          <SalesOrderSection title="最近操作">
+            <ModuleLogTable logs={module.logs} />
+          </SalesOrderSection>
+        ) : null}
+
+        {/* 新增规则Drawer */}
+        <Drawer
+          isOpen={isRuleDrawerOpen}
+          onClose={() => setIsRuleDrawerOpen(false)}
+          title="新增编号规则"
+          footer={
+            <>
+              <Button onClick={() => setIsRuleDrawerOpen(false)}>取消</Button>
+              <Button tone="primary" onClick={() => setIsRuleDrawerOpen(false)}>保存</Button>
+            </>
+          }
+        >
+          <div className="grid gap-x-4 gap-y-5 md:grid-cols-2">
+            <ConfigDrawerField label="单据类型">
+              <Select value={newRuleForm.docType} onChange={(v) => setNewRuleForm((f) => ({ ...f, docType: v }))} options={["销售订单", "采购订单", "零售单", "出库单", "入库单", "调拨单"]} placeholder="选择类型" />
+            </ConfigDrawerField>
+            <ConfigDrawerField label="前缀">
+              <Input value={newRuleForm.prefix} onChange={(v) => setNewRuleForm((f) => ({ ...f, prefix: v }))} placeholder="如：XS" />
+            </ConfigDrawerField>
+            <ConfigDrawerField label="日期格式">
+              <Select value={newRuleForm.dateFormat} onChange={(v) => setNewRuleForm((f) => ({ ...f, dateFormat: v }))} options={["YYYYMMDD", "YYYYMM", "YYYY"]} placeholder="选择格式" />
+            </ConfigDrawerField>
+            <ConfigDrawerField label="序号位数">
+              <Select value={newRuleForm.sequence} onChange={(v) => setNewRuleForm((f) => ({ ...f, sequence: v }))} options={["2位", "3位", "4位", "5位"]} placeholder="选择位数" />
+            </ConfigDrawerField>
+            <ConfigDrawerField label="重置方式">
+              <Select value={newRuleForm.resetType} onChange={(v) => setNewRuleForm((f) => ({ ...f, resetType: v }))} options={["日归零", "月归零", "不归零"]} placeholder="选择方式" />
+            </ConfigDrawerField>
+            <ConfigDrawerField label="状态">
+              <Select value={newRuleForm.status} onChange={(v) => setNewRuleForm((f) => ({ ...f, status: v }))} options={["启用", "停用"]} placeholder="选择状态" />
+            </ConfigDrawerField>
+          </div>
+        </Drawer>
+      </div>
+    );
+  }
+
+  // 期初初始化页面
+  if (view === "opening-init") {
+    return (
+      <div className="space-y-4">
+        <div className="grid gap-4 xl:grid-cols-2">
+          {module.panels?.map((panel) => (
+            <SalesOrderSection key={panel.title} title={panel.title}>
+              <div className="text-[13px] text-text-3">{panel.desc}</div>
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                {panel.items.map((item) => (
+                  <div key={item.label} className="rounded-xl border border-line-1 bg-fill-2 px-4 py-3 shadow-card">
+                    <div className="text-[12px] text-text-3">{item.label}</div>
+                    <div className="mt-1 text-[14px] font-medium text-text-1">
+                      {item.tone ? <StatusPill tone={item.tone}>{item.value}</StatusPill> : item.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </SalesOrderSection>
+          ))}
+        </div>
+
+        <SalesOrderSection title="操作记录">
+          <ModuleLogTable logs={module.logs ?? []} />
+        </SalesOrderSection>
+      </div>
+    );
+  }
+
+  // 打印模板页面
+  if (view === "print-template") {
+    return (
+      <div className="space-y-4">
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Button tone="primary" onClick={() => setIsTemplateDrawerOpen(true)}>新增模板</Button>
+            <Button>批量导入</Button>
+          </div>
+          <div className="overflow-hidden rounded-xl border border-line-1 shadow-soft">
+            <div className="overflow-x-auto">
+              <table className="min-w-[700px] border-collapse text-sm lg:min-w-full">
+                <thead className="bg-fill-2 text-left text-text-2">
+                  <tr className="h-[44px]">
+                    <th className="border-b border-r border-line-1 px-4">单据类型</th>
+                    <th className="border-b border-r border-line-1 px-4">模板名称</th>
+                    <th className="border-b border-r border-line-1 px-4">纸张尺寸</th>
+                    <th className="border-b border-r border-line-1 px-4">默认模板</th>
+                    <th className="border-b border-r border-line-1 px-4">更新时间</th>
+                    <th className="min-w-[120px] whitespace-nowrap border-b border-line-1 px-4 text-center">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {module.templates?.map((tpl) => (
+                    <tr key={tpl.id} className="h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
+                      <td className="border-r border-line-1 px-4 font-medium text-text-1">{tpl.docType}</td>
+                      <td className="border-r border-line-1 px-4">{tpl.templateName}</td>
+                      <td className="border-r border-line-1 px-4">{tpl.paperSize}</td>
+                      <td className="border-r border-line-1 px-4">
+                        <StatusPill tone={(tpl.isDefaultTone as Tone) ?? "gray"}>{tpl.isDefault}</StatusPill>
+                      </td>
+                      <td className="border-r border-line-1 px-4">{tpl.updatedAt}</td>
+                      <td className="min-w-[120px] whitespace-nowrap px-4">
+                        <div className="flex items-center justify-center gap-2">
+                          <Button size="sm">编辑</Button>
+                          <Button size="sm">预览</Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {module.logs ? (
+          <SalesOrderSection title="最近操作">
+            <ModuleLogTable logs={module.logs} />
+          </SalesOrderSection>
+        ) : null}
+
+        {/* 新增模板Drawer */}
+        <Drawer
+          isOpen={isTemplateDrawerOpen}
+          onClose={() => setIsTemplateDrawerOpen(false)}
+          title="新增打印模板"
+          footer={
+            <>
+              <Button onClick={() => setIsTemplateDrawerOpen(false)}>取消</Button>
+              <Button tone="primary" onClick={() => setIsTemplateDrawerOpen(false)}>保存</Button>
+            </>
+          }
+        >
+          <div className="grid gap-x-4 gap-y-5 md:grid-cols-2">
+            <ConfigDrawerField label="单据类型">
+              <Select value={newTemplateForm.docType} onChange={(v) => setNewTemplateForm((f) => ({ ...f, docType: v }))} options={["销售订单", "采购订单", "出库单", "入库单", "调拨单"]} placeholder="选择类型" />
+            </ConfigDrawerField>
+            <ConfigDrawerField label="模板名称">
+              <Input value={newTemplateForm.templateName} onChange={(v) => setNewTemplateForm((f) => ({ ...f, templateName: v }))} placeholder="请输入" />
+            </ConfigDrawerField>
+            <ConfigDrawerField label="纸张尺寸">
+              <Select value={newTemplateForm.paperSize} onChange={(v) => setNewTemplateForm((f) => ({ ...f, paperSize: v }))} options={["A4", "A5", "80mm"]} placeholder="选择尺寸" />
+            </ConfigDrawerField>
+          </div>
+        </Drawer>
+      </div>
+    );
+  }
+
+  // 操作日志页面
+  if (view === "operation-log") {
+    return (
+      <div className="space-y-4">
+        {/* 统计卡片 */}
+        <div className="grid gap-4 xl:grid-cols-4">
+          <div className="rounded-xl border border-line-1 bg-white px-4 py-3 shadow-card">
+            <div className="text-[12px] text-text-3">日志总数</div>
+            <div className="mt-1 text-2xl font-semibold text-text-1">{module.logs?.length ?? 0}</div>
+          </div>
+          <div className="rounded-xl border border-line-1 bg-white px-4 py-3 shadow-card">
+            <div className="text-[12px] text-text-3">今日新增</div>
+            <div className="mt-1 text-2xl font-semibold text-brand-6">8</div>
+          </div>
+          <div className="rounded-xl border border-line-1 bg-white px-4 py-3 shadow-card">
+            <div className="text-[12px] text-text-3">异常告警</div>
+            <div className="mt-1 text-2xl font-semibold text-warning">2</div>
+          </div>
+          <div className="rounded-xl border border-line-1 bg-white px-4 py-3 shadow-card">
+            <div className="text-[12px] text-text-3">系统操作</div>
+            <div className="mt-1 text-2xl font-semibold text-text-1">3</div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-end gap-5 rounded-lg border border-line-1 bg-white px-4 py-3.5 text-[13px]">
+          <FilterField label="综合搜索">
+            <SearchInput value="" onChange={() => {}} placeholder="搜索操作/用户" className="w-[220px] bg-white" />
+          </FilterField>
+          <FilterField label="操作类型">
+            <div className="w-[220px]">
+              <Select value="" onChange={() => {}} options={["全部", "登录", "创建", "修改", "删除", "审核"]} placeholder="选择类型" className="bg-white" />
+            </div>
+          </FilterField>
+          <FilterField label="时间范围">
+            <div className="w-[220px]">
+              <Select value="" onChange={() => {}} options={["全部", "今日", "近7天", "近30天"]} placeholder="选择时间" className="bg-white" />
+            </div>
+          </FilterField>
+          <FilterActions />
+        </div>
+
+        <SalesOrderSection title="日志记录">
+          <ModuleLogTable logs={module.logs ?? []} />
+        </SalesOrderSection>
+      </div>
+    );
+  }
+
+  // 默认展示面板（兜底）
   return (
     <div className="space-y-4">
-      <PageTitle title={module.title}>{module.description}</PageTitle>
-      <div className={cn("grid gap-4", module.panels.length > 1 ? "xl:grid-cols-2" : "xl:grid-cols-1")}>
-        {module.panels.map((panel) => (
+      <div className={cn("grid gap-4", (module.panels?.length ?? 0) > 1 ? "xl:grid-cols-2" : "xl:grid-cols-1")}>
+        {module.panels?.map((panel) => (
           <SalesOrderSection key={panel.title} title={panel.title}>
             <div className="text-[13px] text-text-3">{panel.desc}</div>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -646,44 +1162,12 @@ export function GenericConfigPage({ view }: { view: ViewKey }) {
   );
 }
 
-function FilterItem({
-  filter,
-  keyword,
-  onKeywordChange,
-  value,
-  onValueChange,
-}: {
-  filter: ModuleFilter;
-  keyword: string;
-  onKeywordChange: (value: string) => void;
-  value: string;
-  onValueChange: (value: string) => void;
-}) {
-  if (filter.type === "search") {
-    return (
-      <FilterField label={filter.label} className="min-w-[220px]">
-        <SearchInput value={keyword} onChange={onKeywordChange} placeholder={filter.placeholder ?? "搜索"} className="w-[220px] bg-white" />
-      </FilterField>
-    );
-  }
-
-  if (filter.type === "select") {
-    return (
-      <FilterField label={filter.label} className="min-w-[180px]">
-        <div className="w-[180px]">
-          <Select value={value} onChange={onValueChange} options={filter.options ?? []} placeholder={filter.label} className="bg-white" />
-        </div>
-      </FilterField>
-    );
-  }
-
+function ConfigDrawerField({ label, children, className }: { label: string; children: ReactNode; className?: string }) {
   return (
-    <FilterField label={filter.label} className="min-w-[260px]">
-      <div className="grid grid-cols-2 gap-2">
-        <DateField value="" onChange={() => {}} className="bg-white" />
-        <DateField value="" onChange={() => {}} className="bg-white" />
-      </div>
-    </FilterField>
+    <label className={cn("block", className)}>
+      <div className="mb-2 text-[13px] font-medium text-text-2">{label}</div>
+      {children}
+    </label>
   );
 }
 
@@ -740,31 +1224,6 @@ function renderGenericValue(value: unknown, kind?: "text" | "status" | "money", 
     return <StatusPill tone={tone ?? "gray"}>{String(value ?? "-")}</StatusPill>;
   }
   return String(value ?? "-");
-}
-
-function compareRecord(
-  a: CrudRecord,
-  b: CrudRecord,
-  sortConfig: { key: string; direction: "asc" | "desc" } | null,
-) {
-  if (!sortConfig) return 0;
-  const { key, direction } = sortConfig;
-  const factor = direction === "asc" ? 1 : -1;
-  const valueA = normalizeSortValue(a[key]);
-  const valueB = normalizeSortValue(b[key]);
-  if (valueA < valueB) return -1 * factor;
-  if (valueA > valueB) return 1 * factor;
-  return 0;
-}
-
-function normalizeSortValue(value: unknown) {
-  if (typeof value === "number") return value;
-  const text = String(value ?? "");
-  const money = Number(text.replace(/[^0-9.-]+/g, ""));
-  if (text.includes("¥") && Number.isFinite(money)) return money;
-  const time = new Date(text.replace(/\./g, "/")).getTime();
-  if (Number.isFinite(time) && /[-/:]/.test(text)) return time;
-  return text.toLowerCase();
 }
 
 function ModuleLogTable({ logs }: { logs: any[] }) {

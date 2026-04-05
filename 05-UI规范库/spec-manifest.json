@@ -1,0 +1,150 @@
+{
+  "project_name": "强盛进销存项目",
+  "design_principles": [
+    "Arco式紧凑后台",
+    "高信息密度",
+    "小圆角",
+    "低装饰",
+    "桌面端完整后台，移动端抽屉+横向滚动"
+  ],
+  "confirmed_dimensions": {
+    "top_bar_height": "54px",
+    "sidebar_width": "200px",
+    "primary_control_height": "32px",
+    "secondary_button_height": "28px",
+    "menu_item_height": "42px",
+    "profile_dropdown_width": "220-260px",
+    "drawer_width": [
+      "520px",
+      "720px"
+    ]
+  },
+  "page_templates": {
+    "dashboard": [
+      "01-系统级约束总则.md",
+      "03-页面模板与骨架规范.md",
+      "04-组件与交互规则.md"
+    ],
+    "list": [
+      "01-系统级约束总则.md",
+      "03-页面模板与骨架规范.md",
+      "04-组件与交互规则.md",
+      "05-状态权限与异常规则.md"
+    ],
+    "detail": [
+      "01-系统级约束总则.md",
+      "03-页面模板与骨架规范.md",
+      "04-组件与交互规则.md",
+      "05-状态权限与异常规则.md"
+    ],
+    "create_edit": [
+      "01-系统级约束总则.md",
+      "03-页面模板与骨架规范.md",
+      "04-组件与交互规则.md",
+      "05-状态权限与异常规则.md"
+    ],
+    "modal_form": [
+      "01-系统级约束总则.md",
+      "03-页面模板与骨架规范.md",
+      "04-组件与交互规则.md",
+      "05-状态权限与异常规则.md"
+    ]
+  },
+  "component_rules": {
+    "button": "04-组件与交互规则.md",
+    "input": "04-组件与交互规则.md",
+    "select": "04-组件与交互规则.md",
+    "datepicker": "04-组件与交互规则.md",
+    "textarea": "04-组件与交互规则.md",
+    "switch": "04-组件与交互规则.md",
+    "table": "04-组件与交互规则.md",
+    "pagination": "04-组件与交互规则.md",
+    "tabs": "04-组件与交互规则.md",
+    "profile_dropdown": "04-组件与交互规则.md",
+    "editable_subtable": "04-组件与交互规则.md",
+    "stepper": "04-组件与交互规则.md",
+    "hint_box": "04-组件与交互规则.md"
+  },
+  "state_rules": {
+    "success": "05-状态权限与异常规则.md",
+    "error": "05-状态权限与异常规则.md",
+    "loading": "05-状态权限与异常规则.md",
+    "empty": "05-状态权限与异常规则.md",
+    "no_result": "05-状态权限与异常规则.md",
+    "permission": "05-状态权限与异常规则.md",
+    "danger_action": "05-状态权限与异常规则.md"
+  },
+  "page_to_spec_map": {
+    "工作台首页": {
+      "template": "dashboard",
+      "specs": [
+        "01-系统级约束总则.md",
+        "02-Token与代码基线.md",
+        "03-页面模板与骨架规范.md",
+        "04-组件与交互规则.md",
+        "05-状态权限与异常规则.md",
+        "08-页面实例映射.md"
+      ]
+    },
+    "线索管理列表页": {
+      "template": "list",
+      "specs": [
+        "01-系统级约束总则.md",
+        "02-Token与代码基线.md",
+        "03-页面模板与骨架规范.md",
+        "04-组件与交互规则.md",
+        "05-状态权限与异常规则.md",
+        "08-页面实例映射.md"
+      ]
+    },
+    "企业信息表单页": {
+      "template": "create_edit",
+      "specs": [
+        "01-系统级约束总则.md",
+        "02-Token与代码基线.md",
+        "03-页面模板与骨架规范.md",
+        "04-组件与交互规则.md",
+        "05-状态权限与异常规则.md",
+        "08-页面实例映射.md"
+      ]
+    },
+    "顶栏个人信息下拉": {
+      "template": "dashboard",
+      "specs": [
+        "01-系统级约束总则.md",
+        "02-Token与代码基线.md",
+        "04-组件与交互规则.md",
+        "05-状态权限与异常规则.md",
+        "08-页面实例映射.md"
+      ]
+    },
+    "详情页示例": {
+      "template": "detail",
+      "specs": [
+        "01-系统级约束总则.md",
+        "03-页面模板与骨架规范.md",
+        "04-组件与交互规则.md",
+        "05-状态权限与异常规则.md",
+        "08-页面实例映射.md"
+      ]
+    }
+  },
+  "ai_task_templates": [
+    {
+      "name": "先出页面方案",
+      "doc": "06-AI协作输入输出模板.md"
+    },
+    {
+      "name": "先出结构原型",
+      "doc": "06-AI协作输入输出模板.md"
+    },
+    {
+      "name": "直接出前端骨架",
+      "doc": "06-AI协作输入输出模板.md"
+    },
+    {
+      "name": "补齐异常态和权限态",
+      "doc": "06-AI协作输入输出模板.md"
+    }
+  ]
+}

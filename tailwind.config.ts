@@ -7,6 +7,7 @@ export default {
       colors: {
         brand: {
           1: "var(--brand-1)",
+          2: "var(--brand-2)",
           3: "var(--brand-3)",
           4: "var(--brand-4)",
           5: "var(--brand-5)",
@@ -35,6 +36,13 @@ export default {
         success: "#00b42a",
         warning: "#ff7d00",
         danger: "#f53f3f",
+        hover: {
+          bg: "var(--hover-bg)",
+        },
+        filter: {
+          bg: "var(--filter-bg)",
+          "bg-solid": "var(--filter-bg-solid)",
+        },
       },
       boxShadow: {
         panel: "0 10px 30px rgba(15, 35, 95, 0.05)",

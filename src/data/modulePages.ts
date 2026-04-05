@@ -135,11 +135,25 @@ export type ConfigModuleDefinition = {
   view: ViewKey;
   title: string;
   description: string;
-  panels: Array<{
+  // 用户管理模块
+  userColumns?: ModuleColumn[];
+  users?: Array<Record<string, string>>;
+  // 角色管理
+  roleColumns?: ModuleColumn[];
+  roles?: Array<Record<string, string>>;
+  // 通用面板配置（用于不需要列表的配置模块）
+  panels?: Array<{
     title: string;
     desc: string;
-    items: Array<{ label: string; value: string; tone?: Tone }>;
+    items: Array<{ label: string; value: string; tone?: Tone; editable?: boolean }>;
   }>;
+  // 编号规则配置
+  ruleColumns?: ModuleColumn[];
+  rules?: Array<Record<string, string>>;
+  // 模板配置
+  templateColumns?: ModuleColumn[];
+  templates?: Array<Record<string, string>>;
+  // 日志
   logs?: ModuleLog[];
 };
 
@@ -1090,9 +1104,33 @@ export const configModuleDefinitions: Record<string, ConfigModuleDefinition> = {
     view: "user-permission",
     title: "用户与权限",
     description: "维护用户账号、角色与数据权限。",
-    panels: [
-      { title: "角色概览", desc: "查看当前业务角色和授权范围。", items: [{ label: "业务员", value: "12人", tone: "blue" }, { label: "仓库员", value: "8人", tone: "green" }, { label: "管理员", value: "3人", tone: "orange" }] },
-      { title: "权限策略", desc: "统一销售、采购、库存的页面与数据口径。", items: [{ label: "菜单权限", value: "按角色配置" }, { label: "数据权限", value: "按组织/仓库隔离" }, { label: "审批权限", value: "按单据流转控制" }] },
+    userColumns: [
+      { key: "username", label: "用户名" },
+      { key: "name", label: "姓名" },
+      { key: "role", label: "角色", kind: "status", toneKey: "roleTone" },
+      { key: "department", label: "部门" },
+      { key: "status", label: "状态", kind: "status", toneKey: "statusTone" },
+      { key: "lastLogin", label: "最后登录" },
+    ],
+    users: [
+      { id: "u001", username: "wangchen", name: "王晨", role: "业务员", roleTone: "blue", department: "销售部", status: "启用", statusTone: "green", lastLogin: "2025/04/03 18:30" },
+      { id: "u002", username: "lifei", name: "李菲", role: "仓库员", roleTone: "green", department: "仓储部", status: "启用", statusTone: "green", lastLogin: "2025/04/03 17:45" },
+      { id: "u003", username: "qianyu", name: "钱宇", role: "管理员", roleTone: "orange", department: "管理层", status: "启用", statusTone: "green", lastLogin: "2025/04/03 09:00" },
+      { id: "u004", username: "zhouman", name: "周曼", role: "业务员", roleTone: "blue", department: "销售部", status: "启用", statusTone: "green", lastLogin: "2025/04/02 16:20" },
+      { id: "u005", username: "sunli", name: "孙丽", role: "仓库员", roleTone: "green", department: "仓储部", status: "停用", statusTone: "gray", lastLogin: "2025/03/28 10:00" },
+      { id: "u006", username: "zhubao", name: "朱宝", role: "业务员", roleTone: "blue", department: "销售部", status: "启用", statusTone: "green", lastLogin: "2025/04/03 14:30" },
+    ],
+    roleColumns: [
+      { key: "roleName", label: "角色名称" },
+      { key: "roleCode", label: "角色编码" },
+      { key: "userCount", label: "用户数" },
+      { key: "description", label: "说明" },
+    ],
+    roles: [
+      { id: "r001", roleName: "管理员", roleCode: "ADMIN", userCount: "3人", description: "系统全部权限" },
+      { id: "r002", roleName: "业务员", roleCode: "SALEMAN", userCount: "12人", description: "销售订单、发货权限" },
+      { id: "r003", roleName: "仓库员", roleCode: "WAREHOUSE", userCount: "8人", description: "出库、入库、盘点权限" },
+      { id: "r004", roleName: "财务", roleCode: "FINANCE", userCount: "2人", description: "收款、付款、对账权限" },
     ],
     logs: buildLogs("用户权限"),
   },
@@ -1101,9 +1139,21 @@ export const configModuleDefinitions: Record<string, ConfigModuleDefinition> = {
     view: "document-number",
     title: "单据编号",
     description: "配置销售、采购、库存单据的编号规则。",
-    panels: [
-      { title: "编号规则", desc: "统一销售、采购、库存单据前缀与日期规则。", items: [{ label: "销售订单", value: "XS+日期+序号" }, { label: "采购订单", value: "CG+日期+序号" }, { label: "库存单据", value: "CK/RK/DB+日期+序号" }] },
-      { title: "重置策略", desc: "控制编号按天或按月归零。", items: [{ label: "日归零", value: "销售、零售" }, { label: "月归零", value: "采购、库存" }, { label: "手工校正", value: "管理员可维护" }] },
+    ruleColumns: [
+      { key: "docType", label: "单据类型" },
+      { key: "prefix", label: "前缀" },
+      { key: "dateFormat", label: "日期格式" },
+      { key: "sequence", label: "序号位数" },
+      { key: "resetType", label: "重置方式" },
+      { key: "status", label: "状态", kind: "status", toneKey: "statusTone" },
+    ],
+    rules: [
+      { id: "rule001", docType: "销售订单", prefix: "XS", dateFormat: "YYYYMMDD", sequence: "4位", resetType: "日归零", status: "启用", statusTone: "green" },
+      { id: "rule002", docType: "采购订单", prefix: "CG", dateFormat: "YYYYMMDD", sequence: "4位", resetType: "月归零", status: "启用", statusTone: "green" },
+      { id: "rule003", docType: "零售单", prefix: "LS", dateFormat: "YYYYMMDD", sequence: "4位", resetType: "日归零", status: "启用", statusTone: "green" },
+      { id: "rule004", docType: "出库单", prefix: "CK", dateFormat: "YYYYMMDD", sequence: "4位", resetType: "日归零", status: "启用", statusTone: "green" },
+      { id: "rule005", docType: "入库单", prefix: "RK", dateFormat: "YYYYMMDD", sequence: "4位", resetType: "月归零", status: "启用", statusTone: "green" },
+      { id: "rule006", docType: "调拨单", prefix: "DB", dateFormat: "YYYYMMDD", sequence: "4位", resetType: "月归零", status: "停用", statusTone: "gray" },
     ],
     logs: buildLogs("编号规则"),
   },
@@ -1113,8 +1163,17 @@ export const configModuleDefinitions: Record<string, ConfigModuleDefinition> = {
     title: "期初初始化",
     description: "查看商品、客户、供应商和库存期初导入状态。",
     panels: [
-      { title: "初始化进度", desc: "按主数据和库存维度查看期初装载状态。", items: [{ label: "商品期初", value: "已完成" }, { label: "客户期初", value: "已完成" }, { label: "库存期初", value: "待复核", tone: "orange" }] },
-      { title: "导入要求", desc: "确保期初数据口径与库存底账一致。", items: [{ label: "模板版本", value: "V2.1" }, { label: "校验规则", value: "编码唯一 / 数量非负" }, { label: "责任人", value: "实施顾问" }] },
+      { title: "初始化进度", desc: "按主数据和库存维度查看期初装载状态。", items: [
+        { label: "商品期初", value: "已完成", tone: "green" },
+        { label: "客户期初", value: "已完成", tone: "green" },
+        { label: "供应商期初", value: "已完成", tone: "green" },
+        { label: "库存期初", value: "待复核", tone: "orange" },
+      ]},
+      { title: "导入要求", desc: "确保期初数据口径与库存底账一致。", items: [
+        { label: "模板版本", value: "V2.1" },
+        { label: "校验规则", value: "编码唯一/数量非负" },
+        { label: "责任人", value: "实施顾问" },
+      ]},
     ],
     logs: buildLogs("期初初始化"),
   },
@@ -1123,9 +1182,19 @@ export const configModuleDefinitions: Record<string, ConfigModuleDefinition> = {
     view: "print-template",
     title: "打印模板",
     description: "维护销售、采购、库存单据打印模板。",
-    panels: [
-      { title: "模板清单", desc: "当前已配置的打印模板。", items: [{ label: "销售订单", value: "标准版A4" }, { label: "采购订单", value: "供应商版A4" }, { label: "出库单", value: "仓库版热敏" }] },
-      { title: "模板能力", desc: "支持按单据类型、仓库和语言版本切换。", items: [{ label: "条码打印", value: "支持" }, { label: "多语言", value: "预留" }, { label: "批量打印", value: "支持" }] },
+    templateColumns: [
+      { key: "docType", label: "单据类型" },
+      { key: "templateName", label: "模板名称" },
+      { key: "paperSize", label: "纸张尺寸" },
+      { key: "isDefault", label: "默认模板", kind: "status", toneKey: "isDefaultTone" },
+      { key: "updatedAt", label: "更新时间" },
+    ],
+    templates: [
+      { id: "tpl001", docType: "销售订单", templateName: "标准版A4", paperSize: "A4", isDefault: "是", isDefaultTone: "green", updatedAt: "2025/03/15" },
+      { id: "tpl002", docType: "销售订单", templateName: "简洁版A5", paperSize: "A5", isDefault: "否", isDefaultTone: "gray", updatedAt: "2025/03/15" },
+      { id: "tpl003", docType: "采购订单", templateName: "供应商版A4", paperSize: "A4", isDefault: "是", isDefaultTone: "green", updatedAt: "2025/03/15" },
+      { id: "tpl004", docType: "出库单", templateName: "仓库版热敏", paperSize: "80mm", isDefault: "是", isDefaultTone: "green", updatedAt: "2025/03/20" },
+      { id: "tpl005", docType: "入库单", templateName: "标准版A4", paperSize: "A4", isDefault: "是", isDefaultTone: "green", updatedAt: "2025/03/15" },
     ],
     logs: buildLogs("打印模板"),
   },
@@ -1134,10 +1203,18 @@ export const configModuleDefinitions: Record<string, ConfigModuleDefinition> = {
     view: "operation-log",
     title: "操作日志",
     description: "查看关键业务操作、审批动作和配置变更。",
-    panels: [
-      { title: "日志范围", desc: "覆盖销售、采购、库存、设置模块。", items: [{ label: "日志总数", value: "2,186条" }, { label: "今日新增", value: "68条", tone: "blue" }, { label: "异常告警", value: "2条", tone: "orange" }] },
+    logs: [
+      { time: "2025/04/03 18:30", user: "王晨", action: "登录", detail: "用户登录系统" },
+      { time: "2025/04/03 18:25", user: "王晨", action: "修改", detail: "销售订单 XS20250403001 已更新" },
+      { time: "2025/04/03 17:45", user: "李菲", action: "出库", detail: "出库单 CK20250403002 已确认" },
+      { time: "2025/04/03 17:30", user: "钱宇", action: "新增", detail: "新增用户 wangqiang" },
+      { time: "2025/04/03 16:20", user: "周曼", action: "审核", detail: "销售订单 XS20250403001 已通过审核" },
+      { time: "2025/04/03 15:00", user: "系统", action: "流转", detail: "单据 XS20250402003 进入收款节点" },
+      { time: "2025/04/03 14:30", user: "朱宝", action: "创建", detail: "销售订单 XS20250403003 已创建" },
+      { time: "2025/04/03 12:20", user: "王晨", action: "创建", detail: "调拨单 DB20250403001 已创建" },
+      { time: "2025/04/03 10:10", user: "系统", action: "告警", detail: "库存预警：SKU-100124 现存低于最小库存" },
+      { time: "2025/04/03 09:00", user: "钱宇", action: "配置", detail: "单据编号规则已更新" },
     ],
-    logs: buildLogs("操作日志"),
   },
 };
 

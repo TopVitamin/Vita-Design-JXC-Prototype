@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { HashRouter, Routes, Route, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
+import { MessageContainer } from "./components/Ui";
 import { configModuleViews, crudModuleViews, formModuleViews, queryModuleViews } from "./data/modulePages";
 import { CustomerLedgerPage } from "./pages/CustomerLedgerPage";
 import { DashboardPage } from "./pages/DashboardPage";
@@ -46,7 +47,7 @@ function getShellMeta(pathname: string, currentView: ViewKey) {
   if (pathname === "/sales-orders/new") {
     return {
       ...baseMeta,
-      pageLabel: "销售订单新增",
+      pageLabel: "新增销售订单",
       description: "新增销售订单，录入客户、商品与交付信息。",
     };
   }
@@ -54,8 +55,8 @@ function getShellMeta(pathname: string, currentView: ViewKey) {
   if (/^\/sales-orders\/[^/]+\/edit$/.test(pathname)) {
     return {
       ...baseMeta,
-      pageLabel: "销售订单修改",
-      description: "修改销售订单信息并重新提交流转。",
+      pageLabel: "编辑销售订单",
+      description: "编辑销售订单信息并重新提交流转。",
     };
   }
 
@@ -70,7 +71,7 @@ function getShellMeta(pathname: string, currentView: ViewKey) {
   if (isGenericCrud && pathname === `/${currentView}/new`) {
     return {
       ...baseMeta,
-      pageLabel: `${baseMeta.pageLabel}新增`,
+      pageLabel: `新增${baseMeta.pageLabel}`,
       description: `新增${baseMeta.pageLabel}并录入基础信息。`,
     };
   }
@@ -78,8 +79,8 @@ function getShellMeta(pathname: string, currentView: ViewKey) {
   if (isGenericCrud && new RegExp(`^/${currentView}/[^/]+/edit$`).test(pathname)) {
     return {
       ...baseMeta,
-      pageLabel: `${baseMeta.pageLabel}修改`,
-      description: `修改${baseMeta.pageLabel}信息并保存。`,
+      pageLabel: `编辑${baseMeta.pageLabel}`,
+      description: `编辑${baseMeta.pageLabel}信息并保存。`,
     };
   }
 
@@ -182,6 +183,7 @@ export default function App() {
   return (
     <HashRouter>
       <ShellWrapper />
+      <MessageContainer />
     </HashRouter>
   );
 }
