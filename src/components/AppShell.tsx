@@ -26,7 +26,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { type NavGroup, type ViewKey } from "../data/mock";
+import { type NavGroup, type ViewKey } from "../app/navigation";
 import { cn } from "../utils/cn";
 
 type ShellProps = {
@@ -54,6 +54,7 @@ export function AppShell({
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
   const [menuKeyword, setMenuKeyword] = useState("");
   const [isMenuSearchOpen, setIsMenuSearchOpen] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(
@@ -70,6 +71,7 @@ export function AppShell({
     setActiveCollapsedGroup(null);
     setIsMenuSearchOpen(false);
     setMenuKeyword("");
+    setSelectedIndex(-1);
   }, [currentView]);
 
   useEffect(() => {
@@ -355,42 +357,75 @@ export function AppShell({
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-fill-2 text-text-1">
-      <header className="flex h-[54px] items-center justify-between bg-brand-6 px-4 text-white shadow-panel lg:px-5">
-        <div className="flex items-center gap-3 lg:gap-8">
+      <header className="relative z-50 flex h-[58px] items-center justify-between px-4 lg:px-5" style={{
+        background: "linear-gradient(135deg, #1a4fc8 0%, #165dff 55%, #3a7fff 100%)",
+        boxShadow: "0 1px 0 rgba(255,255,255,0.1), 0 4px 20px rgba(22,93,255,0.35)",
+      }}>
+        {/* Noise texture overlay */}
+        <div className="pointer-events-none absolute inset-0 opacity-[0.035]" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E")`,
+          backgroundSize: "180px",
+        }} />
+
+        {/* Bottom glow line */}
+        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-px" style={{
+          background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.25) 30%, rgba(255,255,255,0.25) 70%, transparent 100%)",
+        }} />
+
+        <div className="relative flex items-center gap-3 lg:gap-8">
           <button
             type="button"
             onClick={() => setIsSidebarOpen(true)}
-            className="flex h-8 w-8 items-center justify-center rounded-md bg-white/12 lg:hidden"
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-white/80 transition hover:bg-white/20 lg:hidden"
           >
             <Menu size={16} />
           </button>
+
+          {/* Logo area */}
           <div className="flex items-center gap-3">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full border border-white/35 bg-white/15">
-              <div className="h-3 w-3 rounded-full border-2 border-white border-r-transparent" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 backdrop-blur-sm ring-1 ring-white/20">
+              <Package size={16} className="text-white" />
             </div>
-            <span className="text-base font-semibold">强盛进销存</span>
+            <div className="flex flex-col leading-none">
+              <span className="text-[15px] font-semibold tracking-wide text-white">强盛进销存</span>
+              <span className="mt-0.5 text-[10px] font-medium text-white/40 tracking-widest uppercase">Qiangsheng JXC</span>
+            </div>
           </div>
+
+          {/* Search bar */}
           <label
             ref={searchWrapRef}
-            className="relative hidden h-8 w-[220px] items-center gap-2 rounded-md border border-white/20 bg-white/10 px-3 text-sm text-white/80 md:flex"
+            className="relative hidden h-8 w-[220px] items-center gap-2 rounded-lg border border-white/15 bg-white/8 px-3 text-sm text-white/70 backdrop-blur-sm transition-colors focus-within:border-white/30 focus-within:bg-white/12 md:flex"
           >
-            <Search size={14} />
+            <Search size={13} className="shrink-0 text-white/50" />
             <input
               ref={searchRef}
               value={menuKeyword}
-              onFocus={() => setIsMenuSearchOpen(true)}
+              onFocus={() => { setIsMenuSearchOpen(true); setSelectedIndex(-1); }}
               onChange={(event) => {
                 setMenuKeyword(event.target.value);
                 setIsMenuSearchOpen(true);
+                setSelectedIndex(-1);
               }}
               onKeyDown={(event) => {
-                if (event.key === "Enter" && filteredMenuItems[0]) {
+                if (event.key === "Enter") {
                   event.preventDefault();
-                  handleMenuSelect(filteredMenuItems[0].key);
+                  const idx = selectedIndex >= 0 ? selectedIndex : 0;
+                  if (filteredMenuItems[idx]) {
+                    handleMenuSelect(filteredMenuItems[idx].key);
+                  }
+                }
+                if (event.key === "ArrowDown") {
+                  event.preventDefault();
+                  setSelectedIndex((i) => Math.min(i + 1, filteredMenuItems.length - 1));
+                }
+                if (event.key === "ArrowUp") {
+                  event.preventDefault();
+                  setSelectedIndex((i) => Math.max(i - 1, -1));
                 }
               }}
               placeholder="搜索菜单，快捷键 /"
-              className="w-full bg-transparent outline-none placeholder:text-white/60"
+              className="w-full bg-transparent outline-none placeholder:text-white/40"
             />
 
             {isMenuSearchOpen ? (
@@ -402,12 +437,17 @@ export function AppShell({
                   {filteredMenuItems.length === 0 ? (
                     <div className="px-3 py-8 text-center text-[13px] text-text-3">未找到匹配菜单</div>
                   ) : (
-                    filteredMenuItems.map((item) => (
+                    filteredMenuItems.map((item, idx) => (
                       <button
                         key={item.key}
                         type="button"
                         onClick={() => handleMenuSelect(item.key)}
-                        className="flex w-full items-start gap-3 px-3 py-2.5 text-left transition hover:bg-fill-2"
+                        className={cn(
+                          "flex w-full items-start gap-3 px-3 py-2.5 text-left transition",
+                          selectedIndex === idx
+                            ? "bg-brand-1 text-brand-6"
+                            : "hover:bg-fill-2",
+                        )}
                       >
                         <Search size={14} className="mt-0.5 shrink-0 text-text-3" />
                         <div className="min-w-0">
@@ -424,20 +464,43 @@ export function AppShell({
             ) : null}
           </label>
         </div>
-        <div className="flex items-center gap-1.5 text-white/90 lg:gap-2">
-          <HeaderIconButton label="下载中心" onClick={showComingSoonToast} icon={<Download size={16} />} />
-          <HeaderIconButton label="消息通知" onClick={showComingSoonToast} icon={<Bell size={16} />} />
-          <HeaderIconButton label="AI对话" onClick={showComingSoonToast} icon={<Sparkles size={16} />} />
-          <div className="hidden h-5 w-px bg-white/20 sm:block" />
+        <div className="relative flex items-center gap-1.5 text-white/80 lg:gap-2">
+          <button
+            type="button"
+            onClick={showComingSoonToast}
+            className="hidden h-8 items-center gap-2 rounded-lg px-3 text-xs font-medium text-white/80 transition hover:bg-white/10 sm:flex"
+          >
+            <Download size={14} />
+            下载
+          </button>
+          <button
+            type="button"
+            onClick={showComingSoonToast}
+            className="relative flex h-8 w-8 items-center justify-center rounded-lg text-white/80 transition hover:bg-white/10"
+          >
+            <Bell size={15} />
+            <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-400 ring-1 ring-white/20" />
+          </button>
+          <button
+            type="button"
+            onClick={showComingSoonToast}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-white/80 transition hover:bg-white/10"
+            title="AI对话"
+          >
+            <Sparkles size={15} />
+          </button>
+          <div className="hidden h-5 w-px bg-white/15 sm:block" />
           <div className="relative" ref={profileRef}>
             <button
               type="button"
               onClick={() => setIsProfileOpen((current) => !current)}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-black/12 transition hover:bg-black/20"
+              className="flex h-8 items-center gap-2 rounded-lg px-1.5 py-0.5 transition hover:bg-white/10"
             >
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#ffcf8b] text-[13px] font-semibold text-[#7a2f00]">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 text-[12px] font-semibold text-white ring-1 ring-white/20">
                 维
               </span>
+              <span className="hidden text-xs font-medium text-white/90 lg:block">维他命</span>
+              <ChevronDown size={12} className="hidden text-white/50 lg:block" />
             </button>
 
             {isProfileOpen ? (
@@ -548,27 +611,6 @@ export function AppShell({
         </main>
       </div>
     </div>
-  );
-}
-
-function HeaderIconButton({
-  icon,
-  label,
-  onClick,
-}: {
-  icon: ReactNode;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      title={label}
-      onClick={onClick}
-      className="hidden h-7 w-7 items-center justify-center rounded-md bg-white/8 transition hover:bg-white/16 sm:flex"
-    >
-      {icon}
-    </button>
   );
 }
 

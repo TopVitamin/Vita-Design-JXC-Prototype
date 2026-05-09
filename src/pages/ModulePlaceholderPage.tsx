@@ -1,6 +1,7 @@
 import { AlertCircle } from "lucide-react";
 import { Button, PageTitle, Surface } from "../components/Ui";
-import { type PageDepth, type ViewKey, placeholderSummaries } from "../data/mock";
+import { type PageDepth, type ViewKey } from "../app/navigation";
+import { placeholderSummaries } from "../data/mock";
 
 export function ModulePlaceholderPage({ view, depth }: { view: ViewKey; depth: PageDepth }) {
   const summary = placeholderSummaries[view];

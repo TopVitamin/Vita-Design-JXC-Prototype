@@ -209,6 +209,8 @@ font-family: "PingFang SC", "SF Pro Display", "Helvetica Neue", Arial, sans-seri
 />
 ```
 
+下拉选项层已按 **3.16 浮层 Portal 规范** 实现（`Ui.tsx`），可放在带 `overflow-hidden` / `overflow-x-auto` 的筛选卡片、表格容器内使用，无需页面单独处理裁切。
+
 ### 3.4 DateField / DateRangeField
 
 ```tsx
@@ -221,6 +223,8 @@ font-family: "PingFang SC", "SF Pro Display", "Helvetica Neue", Arial, sans-seri
   onChange={(range) => setRange(range)}
 />
 ```
+
+日历面板同样遵循 **3.16**，与 `Select` 一致不受外层 `overflow` 裁切。
 
 ### 3.5 PageTitle
 
@@ -247,10 +251,19 @@ font-family: "PingFang SC", "SF Pro Display", "Helvetica Neue", Arial, sans-seri
 
 ### 3.7 TabBar
 
-横向 Tab 切换组件。
+横向 Tab 切换组件，源码：`src/components/Ui.tsx` → `TabBar`。
+
+#### 三种形态（`variant`）
+
+| 取值 | 适用场景 |
+|------|----------|
+| **`pill`**（默认） | 详情页子区块切换、与正文间距较大的独立 Tab 带。圆角描边按钮样式。 |
+| **`segmented`** | 需要「分段控件」弱工具感时使用（浅灰托盘 + 白底选中项）。 |
+| **`underline`** | **列表页顶部「按单据状态筛选」** 等场景：底部分割线 + 选中项蓝色字 + **居中短墨条**，与 Ant Design `Tabs type="line"` 一致。 |
 
 ```tsx
 <TabBar
+  variant="underline"
   items={[
     { key: "all", label: "全部" },
     { key: "pending", label: "待审核" },
@@ -259,6 +272,23 @@ font-family: "PingFang SC", "SF Pro Display", "Helvetica Neue", Arial, sans-seri
   onChange={(key) => setActiveTab(key)}
 />
 ```
+
+#### `underline` 视觉规范（团队约定）
+
+- **整根分割线**：`TabBar` 根节点带 `border-b border-line-1`，与下方筛选区形成明确层级，不要用 Tab 与筛选之间「大块空白」代替分割。
+- **选中态**：文案 `text-brand-6` + `font-medium`；指示器为 **水平居中、宽约 32px（`w-8`）、高 2px** 的 `brand-6` 色条（`::after`），压在底线上，**不要用整格 Tab 宽度的 `border-b-2`**，避免与「短墨条」参考不一致。
+- **未选中**：`text-text-2`，悬停可略偏主色（如 `hover:text-brand-6/90`）。
+- **Tab 按钮内边距（组件内已写死，勿在业务里重复造轮子）**：上 `pt-2`、下 `pb-3`，保证短墨条与文字、底线的呼吸感；若全项目要统一调整，只改 `Ui.tsx` 一处。
+- **无障碍**：`role="tablist"` / `tab` / `aria-selected` 已由组件输出，业务侧保持 `items.key` 稳定即可。
+
+#### 与「筛选区同卡」时的外边距（业务侧）
+
+列表页将 `underline` Tab 与筛选表单放在**同一张白卡片**内时，Tab 外建议包一层：
+
+- `className="bg-white px-4 pt-2.5"`（与卡片上边框的留白；**推荐 `pt-2.5`～`pt-3`**，忌 `pt-1` 贴顶、忌 `pt-4` 以上过大）
+- 筛选区：`px-4 py-4`，与 Tab 区之间**不再**单独套一层带灰底的条，分割线仅依赖 `TabBar` 自带 `border-b`。
+
+**参考实现**：`src/pages/PurchaseModulePages.tsx` → `PurchaseOrdersPage`（状态 Tab + 数量角标 + 查询表单同卡）。
 
 ### 3.8 StatusPill
 
@@ -358,6 +388,39 @@ font-family: "PingFang SC", "SF Pro Display", "Helvetica Neue", Arial, sans-seri
 <HintBox type="info" message="提示信息" />
 ```
 
+### 3.16 浮层与弹出层（Portal 统一规范）
+
+**问题**：列表筛选区、表格区常用 `rounded-lg` + `overflow-hidden`（或 `overflow-x-auto`）控制圆角与横向滚动。子节点若用 **`position: absolute` + `top: 100%`** 挂在表单项下方，浮层仍是卡片 DOM 子树，会被 **`overflow` 裁切**，表现为下拉、日历「只露一半」或完全看不见。
+
+**原则**：凡「锚在某一控件附近、盖住下方内容」的交互层（下拉列表、日期面板、批量录入大面板、自定义气泡菜单等），**默认不得在业务页面里用纯 absolute 凑合**；应统一为 **Portal 挂到 `document.body` + `position: fixed` + 与锚点对齐**，与列表卡片是否 `overflow-hidden` 解耦。
+
+#### 实现清单（新增同类组件时必做）
+
+1. **触发区与面板分离 ref**：如 `triggerRef`（仅触发条/按钮）、`popoverRef`（浮层根节点）。
+2. **挂载**：`createPortal(面板节点, document.body)`；渲染前判断 `typeof document !== "undefined"`（兼容构建/SSR 习惯）。
+3. **定位**：根据 `triggerRef.current.getBoundingClientRect()` 设置 `top = rect.bottom + 间距`、`left = rect.left`；`minWidth` 至少不小于触发器宽度（或与设计稿一致的最小宽）。
+4. **视口边界**：`left` 在 `8px` 与 `window.innerWidth - 面板宽 - 8` 之间夹紧，避免贴右被裁。
+5. **层级**：使用 `Ui.tsx` 顶部常量 **`FLOATING_PANEL_Z`（当前 320）**，保证高于卡片、表头 sticky、一般 `z-50` 内容；**不要**各组件随意写 magic number。
+6. **滚动与缩放**：`window` 上监听 **`scroll`（`capture: true`，包含内部滚动容器）** 与 **`resize`**，在打开期间更新位置；关闭时移除监听。
+7. **点击外部关闭**：`mousedown` 判断目标既不在 `triggerRef` 内也不在 `popoverRef` 内再关闭；**仅在下拉打开时注册监听**，避免无意义全局监听。
+8. **大面板高度**：对可能很高的浮层设置 **`max-height: min(设计上限, calc(100vh - 余量))`**，内部 **`overflow-y: auto`**，避免伸出视口底部仍「像被挡住」。
+
+#### 已在 `Ui.tsx` 落地的组件（直接复用，勿重复造轮子）
+
+| 组件 | 说明 |
+|------|------|
+| `Select` | 可搜索、选项列表 |
+| `BatchSearchInput` | 采购单号等批量精确匹配大弹层 |
+| `DateField` | 单日历 |
+| `DateRangeField` | 日期范围 |
+
+新增下拉/浮层类组件时，**复制上述同一套逻辑**（或抽成内部 hook 后再接新 UI），不要只改「当前报问题的页面」。
+
+#### 反模式（禁止依赖）
+
+- 在页面里再包一层 `overflow-visible`「专门给某个下拉救火」——根因未除，换容器又坏。
+- 浮层仍放在筛选卡片内部且仅 `absolute` + 抬 `z-index`——**无法越过父级 `overflow-hidden`**。
+
 ---
 
 ## 4. 页面结构模式
@@ -376,6 +439,8 @@ Table（数据表格）           ← 主体内容
 Pagination（分页）           ← 底部
 ```
 
+**推荐变体（状态筛选为主入口时）**：将「状态 Tab + 筛选表单」合并为**一张卡片**，Tab 使用 `TabBar variant="underline"`，详见下文 **4.1.1**。
+
 **FilterBar 布局**：
 - 外层：`rounded-lg border border-line-1 bg-white px-4 py-3.5`
 - 内部使用 `flex flex-wrap items-end gap-5`
@@ -387,6 +452,48 @@ Pagination（分页）           ← 底部
 - 表体行高：`h-[44px]`，hover `bg-hover`
 - 支持 sticky 列（如复选框、编号列）
 - 最后一列操作按钮居中 `text-center`
+
+### 4.1.1 列表页：状态横线 Tab + 筛选区（通用模版）
+
+**用途**：采购/销售/库存等列表页，顶部按「单据状态」快速切换，下方为同一套查询条件。与详情页内的 `pill` Tab 区分：**列表状态筛选用 `underline` + 同卡布局**。
+
+**版式要点**：
+
+1. 外层一张卡：`section` + `rounded-lg border border-line-1 bg-white shadow-soft` + `overflow-hidden`。
+2. **上区**：仅包 Tab — `div.bg-white.px-4.pt-2.5`（顶距可按产品微调 `pt-2` / `pt-3`）。
+3. **下区**：筛选表单 — `div.px-4.py-4`，与 Tab 之间只靠 `TabBar` 的 `border-b` 分割，不再加第二层灰底栏。
+4. Tab 与表格工具栏、表格之间仍可用页面级 `gap-4` 分隔。
+
+**可复制骨架**：
+
+```tsx
+<section className="overflow-hidden rounded-lg border border-line-1 bg-white shadow-soft">
+  <div className="bg-white px-4 pt-2.5">
+    <TabBar
+      variant="underline"
+      items={STATUS_TABS.map((tab) => ({
+        key: tab,
+        label: (
+          <span className="flex items-center whitespace-nowrap">
+            {tab}
+            {/* 可选：数量角标；当前 Tab 建议与主色一致，如 text-brand-6/85 */}
+          </span>
+        ),
+      }))}
+      activeKey={activeTab}
+      onChange={(key) => {
+        setActiveTab(key);
+        setCurrentPage(1);
+      }}
+    />
+  </div>
+  <div className="px-4 py-4">
+    {/* 查询字段网格 + 展开/重置/搜索 等操作 */}
+  </div>
+</section>
+```
+
+**与组件职责分界**：短墨条、底线、Tab 内边距由 **`TabBar` `underline`** 实现；卡片圆角、顶距 `pt-2.5`、筛选区内边距由**页面**实现。新增列表页时优先复制上述结构，避免再引入一套自定义 Tab 样式。
 
 ### 4.2 详情页（Detail Page）
 
@@ -912,6 +1019,8 @@ function DrawerField({ label, children }: { label: string; children: React.React
 ```
 
 ### 10.5 PageTitle + TabBar + 内容 布局模板
+
+列表页「状态 Tab 与筛选同卡」请使用 **4.1.1 节** 与 **`TabBar variant="underline"`**，勿直接套用下列默认 `pill` 结构。
 
 ```tsx
 export function SomePage() {

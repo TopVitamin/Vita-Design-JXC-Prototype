@@ -1,12 +1,23 @@
 import { useMemo, useState } from "react";
-import { Button, FilterActions, FilterField, Pagination, SearchInput, Select, StatusPill, TableSortHeader } from "../components/Ui";
-import { inventoryRecords } from "../data/mock";
+import { Button, FilterActions, FilterField, Pagination, ResizableHeaderCell, SearchInput, Select, StatusPill, TableSortHeader, useResizableColumns } from "../components/Ui";
+import { inventoryRecords } from "../mocks/inventory";
 
 export function InventoryQueryPage() {
   const [keyword, setKeyword] = useState("");
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const inventoryColumns = [
+    { key: "sku", width: 160, minWidth: 140 },
+    { key: "productName", width: 240, minWidth: 180 },
+    { key: "spec", width: 180, minWidth: 140 },
+    { key: "warehouse", width: 160, minWidth: 140 },
+    { key: "currentStock", width: 120, minWidth: 110 },
+    { key: "reservedStock", width: 120, minWidth: 110 },
+    { key: "availableStock", width: 120, minWidth: 110 },
+    { key: "warning", width: 120, minWidth: 110, resizable: false },
+  ];
+  const { containerRef, totalWidth, getColumnStyle, startResize } = useResizableColumns("inventory-query:list", inventoryColumns);
 
   const filteredRows = useMemo(() => {
     const normalized = keyword.trim().toLowerCase();
@@ -75,31 +86,31 @@ export function InventoryQueryPage() {
       </div>
 
       <div className="overflow-hidden rounded-xl border border-line-1 shadow-soft">
-        <div className="overflow-x-auto">
-          <table className="min-w-[1100px] border-collapse text-sm lg:min-w-full">
+        <div ref={containerRef} className="overflow-x-auto">
+          <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, 1100) }}>
             <thead className="bg-fill-2 text-left text-text-2">
               <tr className="h-[44px]">
-                <th className="border-b border-r border-line-1 px-4"><TableSortHeader label="SKU" sortKey="sku" currentSort={sortConfig} onSort={handleSort} /></th>
-                <th className="border-b border-r border-line-1 px-4"><TableSortHeader label="商品名称" sortKey="productName" currentSort={sortConfig} onSort={handleSort} /></th>
-                <th className="border-b border-r border-line-1 px-4">规格</th>
-                <th className="border-b border-r border-line-1 px-4"><TableSortHeader label="仓库" sortKey="warehouse" currentSort={sortConfig} onSort={handleSort} /></th>
-                <th className="border-b border-r border-line-1 px-4 text-right"><TableSortHeader label="现存" sortKey="currentStock" currentSort={sortConfig} onSort={handleSort} align="right" /></th>
-                <th className="border-b border-r border-line-1 px-4 text-right"><TableSortHeader label="占用" sortKey="reservedStock" currentSort={sortConfig} onSort={handleSort} align="right" /></th>
-                <th className="border-b border-r border-line-1 px-4 text-right"><TableSortHeader label="可用" sortKey="availableStock" currentSort={sortConfig} onSort={handleSort} align="right" /></th>
-                <th className="min-w-[100px] whitespace-nowrap border-b border-line-1 px-4">状态</th>
+                <ResizableHeaderCell width={getColumnStyle("sku").width} minWidth={getColumnStyle("sku").minWidth} onResizeStart={(clientX) => startResize("sku", clientX)}><TableSortHeader label="SKU" sortKey="sku" currentSort={sortConfig} onSort={handleSort} /></ResizableHeaderCell>
+                <ResizableHeaderCell width={getColumnStyle("productName").width} minWidth={getColumnStyle("productName").minWidth} onResizeStart={(clientX) => startResize("productName", clientX)}><TableSortHeader label="商品名称" sortKey="productName" currentSort={sortConfig} onSort={handleSort} /></ResizableHeaderCell>
+                <ResizableHeaderCell width={getColumnStyle("spec").width} minWidth={getColumnStyle("spec").minWidth} onResizeStart={(clientX) => startResize("spec", clientX)}>规格</ResizableHeaderCell>
+                <ResizableHeaderCell width={getColumnStyle("warehouse").width} minWidth={getColumnStyle("warehouse").minWidth} onResizeStart={(clientX) => startResize("warehouse", clientX)}><TableSortHeader label="仓库" sortKey="warehouse" currentSort={sortConfig} onSort={handleSort} /></ResizableHeaderCell>
+                <ResizableHeaderCell width={getColumnStyle("currentStock").width} minWidth={getColumnStyle("currentStock").minWidth} className="text-right" onResizeStart={(clientX) => startResize("currentStock", clientX)}><TableSortHeader label="现存" sortKey="currentStock" currentSort={sortConfig} onSort={handleSort} align="right" /></ResizableHeaderCell>
+                <ResizableHeaderCell width={getColumnStyle("reservedStock").width} minWidth={getColumnStyle("reservedStock").minWidth} className="text-right" onResizeStart={(clientX) => startResize("reservedStock", clientX)}><TableSortHeader label="占用" sortKey="reservedStock" currentSort={sortConfig} onSort={handleSort} align="right" /></ResizableHeaderCell>
+                <ResizableHeaderCell width={getColumnStyle("availableStock").width} minWidth={getColumnStyle("availableStock").minWidth} className="text-right" onResizeStart={(clientX) => startResize("availableStock", clientX)}><TableSortHeader label="可用" sortKey="availableStock" currentSort={sortConfig} onSort={handleSort} align="right" /></ResizableHeaderCell>
+                <ResizableHeaderCell width={getColumnStyle("warning").width} minWidth={getColumnStyle("warning").minWidth} resizable={false} className="border-r-0">状态</ResizableHeaderCell>
               </tr>
             </thead>
             <tbody>
               {paginatedRows.map((item) => (
                 <tr key={item.sku} className="h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
-                  <td className="border-r border-line-1 px-4">{item.sku}</td>
-                  <td className="border-r border-line-1 px-4 text-text-1">{item.productName}</td>
-                  <td className="border-r border-line-1 px-4">{item.spec}</td>
-                  <td className="border-r border-line-1 px-4">{item.warehouse}</td>
-                  <td className="border-r border-line-1 px-4 text-right">{item.currentStock}</td>
-                  <td className="border-r border-line-1 px-4 text-right">{item.reservedStock}</td>
-                  <td className="border-r border-line-1 px-4 text-right font-medium text-text-1">{item.availableStock}</td>
-                  <td className="min-w-[100px] whitespace-nowrap px-4">
+                  <td className="border-r border-line-1 px-4 whitespace-nowrap" style={getColumnStyle("sku")}>{item.sku}</td>
+                  <td className="border-r border-line-1 px-4 text-text-1 whitespace-nowrap" style={getColumnStyle("productName")} title={item.productName}><div className="overflow-hidden text-ellipsis">{item.productName}</div></td>
+                  <td className="border-r border-line-1 px-4 whitespace-nowrap" style={getColumnStyle("spec")}>{item.spec}</td>
+                  <td className="border-r border-line-1 px-4 whitespace-nowrap" style={getColumnStyle("warehouse")}>{item.warehouse}</td>
+                  <td className="border-r border-line-1 px-4 text-right whitespace-nowrap" style={getColumnStyle("currentStock")}>{item.currentStock}</td>
+                  <td className="border-r border-line-1 px-4 text-right whitespace-nowrap" style={getColumnStyle("reservedStock")}>{item.reservedStock}</td>
+                  <td className="border-r border-line-1 px-4 text-right font-medium text-text-1 whitespace-nowrap" style={getColumnStyle("availableStock")}>{item.availableStock}</td>
+                  <td className="px-4 whitespace-nowrap" style={getColumnStyle("warning")}>
                     <StatusPill tone={item.tone}>{item.warning}</StatusPill>
                   </td>
                 </tr>

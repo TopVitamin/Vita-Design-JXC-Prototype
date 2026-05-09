@@ -1,6 +1,6 @@
 import { Minus, Plus, Search, ShoppingCart } from "lucide-react";
 import { Button, Input, PageTitle } from "../components/Ui";
-import { cashierItems, cashierQuickGoods } from "../data/mock";
+import { cashierItems, cashierQuickGoods } from "../mocks/cashier";
 
 export function RetailCashierPage() {
   const subtotal = cashierItems.reduce((sum, item) => sum + item.qty * item.price, 0);

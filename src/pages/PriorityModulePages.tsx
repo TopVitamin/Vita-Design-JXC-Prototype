@@ -1,26 +1,25 @@
-import { startTransition, useDeferredValue, useMemo, useState } from "react";
+import { startTransition, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, FilterActions, FilterField, Pagination, SearchInput, Select, StatusPill, TabBar, TableSortHeader } from "../components/Ui";
+import { Button, FilterActions, FilterField, Message, Pagination, ResizableHeaderCell, SearchInput, Select, StatusPill, TabBar, TableSortHeader, useResizableColumns } from "../components/Ui";
 import { FilterItem } from "../components/FilterItem";
-import { getCrudModuleDefinition, getModuleDefinition, type CrudModuleDefinition, type QueryModuleDefinition, type Tone } from "../data/modulePages";
-import type { ViewKey } from "../data/mock";
+import { getCrudModuleDefinition, getModuleDefinition, saveCrudModuleRecord, type CrudModuleDefinition, type QueryModuleDefinition, type Tone } from "../contracts/modules";
+import { GenericCrudListPage } from "./GenericModulePages";
+import type { ViewKey } from "../app/navigation";
 import { cn } from "../utils/cn";
 import { compareRecord, normalizeSortValue } from "../utils/sort";
 
 export function ProductManagementPage() {
-  return <PriorityCrudListPage view="product-management" />;
+  return <GenericCrudListPage view="product-management" />;
 }
 
 export function CustomerManagementPage() {
-  return <PriorityCrudListPage view="customer-management" />;
+  return <GenericCrudListPage view="customer-management" />;
 }
 
-export function PurchaseOrdersPage() {
-  return <PriorityCrudListPage view="purchase-orders" />;
-}
+
 
 export function SupplierManagementPage() {
-  return <PriorityCrudListPage view="supplier-management" />;
+  return <GenericCrudListPage view="supplier-management" />;
 }
 
 export function WarehouseManagementPage() {
@@ -31,13 +30,7 @@ export function SalesDeliveryPage() {
   return <PriorityCrudListPage view="sales-delivery" />;
 }
 
-export function PurchaseReceiptPage() {
-  return <PriorityCrudListPage view="purchase-receipt" />;
-}
 
-export function PurchaseReturnPage() {
-  return <PriorityCrudListPage view="purchase-return" />;
-}
 
 export function SalesQueryPage() {
   return <PriorityQueryListPage view="sales-query" />;
@@ -58,6 +51,7 @@ export function StockLossPage() {
 function PriorityCrudListPage({ view }: { view: ViewKey }) {
   const navigate = useNavigate();
   const module = getCrudModuleDefinition(view);
+  const [records, setRecords] = useState(module?.records ?? []);
   const [keyword, setKeyword] = useState("");
   const [activeTab, setActiveTab] = useState(module?.statusTabs?.[0] ?? "全部");
   const [selectFilters, setSelectFilters] = useState<Record<string, string>>({});
@@ -66,11 +60,27 @@ function PriorityCrudListPage({ view }: { view: ViewKey }) {
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
   const deferredKeyword = useDeferredValue(keyword);
 
+  useEffect(() => {
+    setRecords(module?.records ?? []);
+  }, [view]);
+
   if (!module) return null;
+
+  const listColumns = [
+    ...module.columns.map((column) => ({
+      key: column.key,
+      width: column.width ?? (column.kind === "status" ? 120 : column.kind === "money" ? 150 : 160),
+      minWidth: column.minWidth ?? (column.kind === "status" ? 110 : 120),
+      maxWidth: column.maxWidth,
+      resizable: column.resizable,
+    })),
+    { key: "__actions__", width: 160, minWidth: 140, resizable: false },
+  ];
+  const { containerRef, totalWidth, getColumnStyle, startResize } = useResizableColumns(`${view}:priority-list`, listColumns);
 
   const filteredRows = useMemo(() => {
     const normalized = deferredKeyword.trim().toLowerCase();
-    return module.records.filter((record) => {
+    return records.filter((record) => {
       if (normalized) {
         const rowText = Object.values(record)
           .filter((value) => typeof value === "string" || typeof value === "number")
@@ -90,7 +100,7 @@ function PriorityCrudListPage({ view }: { view: ViewKey }) {
 
       return true;
     }).sort((a, b) => compareRecord(a, b, sortConfig));
-  }, [activeTab, deferredKeyword, module.records, module.statusTabs, selectFilters, sortConfig]);
+  }, [activeTab, deferredKeyword, records, module.statusTabs, selectFilters, sortConfig]);
 
   const paginatedRows = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -108,6 +118,28 @@ function PriorityCrudListPage({ view }: { view: ViewKey }) {
       }
     }
     setSortConfig({ key, direction });
+  };
+
+  const handleToggleStatus = (recordId: string) => {
+    if (module.kind !== "entity") return;
+
+    const currentRecord = records.find((item) => item.id === recordId);
+    if (!currentRecord) return;
+    const currentStatus = String(currentRecord?.status ?? "");
+    const nextEnabled = currentStatus !== "启用";
+    const nextRecord = {
+      ...currentRecord,
+      status: nextEnabled ? "启用" : "停用",
+      statusTone: nextEnabled ? "green" : "gray",
+      stopReason: nextEnabled ? "" : "前端Demo演示：对象停用。",
+    };
+    const saved = saveCrudModuleRecord(view, nextRecord, "edit");
+    if (!saved) {
+      Message.error(`${module.singular}状态更新失败。`, 3000);
+      return;
+    }
+    setRecords((current) => current.map((record) => (record.id === recordId ? saved : record)));
+    Message.success(currentStatus === "启用" ? `${module.singular}已停用。` : `${module.singular}已启用。`, 2000);
   };
 
   return (
@@ -141,12 +173,20 @@ function PriorityCrudListPage({ view }: { view: ViewKey }) {
         </div>
 
         <div className="overflow-hidden rounded-xl border border-line-1 shadow-soft">
-          <div className="overflow-x-auto">
-          <table className="min-w-[1100px] border-collapse text-sm lg:min-w-full">
+          <div ref={containerRef} className="overflow-x-auto">
+          <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, 1100) }}>
             <thead className="bg-fill-2 text-left text-text-2">
               <tr className="h-[44px]">
                 {module.columns.map((column) => (
-                  <th key={column.key} className={cn("border-b border-r border-line-1 px-4", column.align === "right" && "text-right")}>
+                  <ResizableHeaderCell
+                    key={column.key}
+                    width={getColumnStyle(column.key).width}
+                    minWidth={getColumnStyle(column.key).minWidth}
+                    maxWidth={getColumnStyle(column.key).maxWidth}
+                    className={cn(column.align === "right" && "text-right")}
+                    resizable={column.resizable !== false}
+                    onResizeStart={(clientX) => startResize(column.key, clientX)}
+                  >
                     <TableSortHeader
                       label={column.label}
                       sortKey={column.key}
@@ -154,23 +194,30 @@ function PriorityCrudListPage({ view }: { view: ViewKey }) {
                       onSort={handleSort}
                       align={column.align === "right" ? "right" : "left"}
                     />
-                  </th>
+                  </ResizableHeaderCell>
                 ))}
-                <th className="min-w-[120px] whitespace-nowrap border-b border-line-1 px-4 text-center">操作</th>
+                <ResizableHeaderCell width={getColumnStyle("__actions__").width} minWidth={getColumnStyle("__actions__").minWidth} resizable={false} className="border-r-0 text-center">操作</ResizableHeaderCell>
               </tr>
             </thead>
             <tbody>
               {paginatedRows.map((record) => (
                 <tr key={record.id} className="h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
                   {module.columns.map((column) => (
-                    <td key={column.key} className={cn("border-r border-line-1 px-4", column.align === "right" && "text-right")}>
-                      {renderPriorityValue(record[column.key], column.kind, record[column.toneKey ?? "statusTone"] as Tone | undefined)}
+                    <td key={column.key} className={cn("border-r border-line-1 px-4 whitespace-nowrap", column.align === "right" && "text-right")} style={getColumnStyle(column.key)} title={String(record[column.key] ?? "")}>
+                      <div className="overflow-hidden text-ellipsis">
+                        {renderPriorityValue(record[column.key], column.kind, record[column.toneKey ?? "statusTone"] as Tone | undefined)}
+                      </div>
                     </td>
                   ))}
-                  <td className="min-w-[120px] whitespace-nowrap px-4">
+                  <td className="px-4 whitespace-nowrap" style={getColumnStyle("__actions__")}>
                     <div className="flex items-center justify-center gap-2">
-                      <Button size="sm" onClick={() => navigate(`/${view}/${record.id}`)}>详情</Button>
+                      <Button size="sm" onClick={() => navigate(`/${view}/${record.id}`)}>查看</Button>
                       <Button size="sm" onClick={() => navigate(`/${view}/${record.id}/edit`)}>编辑</Button>
+                      {module.kind === "entity" ? (
+                        <Button size="sm" onClick={() => handleToggleStatus(record.id)}>
+                          {String(record.status) === "启用" ? "停用" : "启用"}
+                        </Button>
+                      ) : null}
                     </div>
                   </td>
                 </tr>
@@ -213,6 +260,15 @@ function PriorityQueryListPage({ view }: { view: "sales-query" }) {
   const deferredKeyword = useDeferredValue(keyword);
 
   if (!module) return null;
+
+  const queryColumns = module.columns.map((column) => ({
+    key: column.key,
+    width: column.width ?? (column.kind === "status" ? 120 : column.align === "right" ? 140 : 160),
+    minWidth: column.minWidth ?? (column.kind === "status" ? 110 : 120),
+    maxWidth: column.maxWidth,
+    resizable: column.resizable,
+  }));
+  const { containerRef, totalWidth, getColumnStyle, startResize } = useResizableColumns(`${view}:priority-query`, queryColumns);
 
   const filteredRows = useMemo(() => {
     const normalized = deferredKeyword.trim().toLowerCase();
@@ -276,12 +332,20 @@ function PriorityQueryListPage({ view }: { view: "sales-query" }) {
       </div>
 
       <div className="overflow-hidden rounded-xl border border-line-1 shadow-soft">
-        <div className="overflow-x-auto">
-          <table className="min-w-[1080px] border-collapse text-sm lg:min-w-full">
+        <div ref={containerRef} className="overflow-x-auto">
+          <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, 1080) }}>
             <thead className="bg-fill-2 text-left text-text-2">
               <tr className="h-[44px]">
                 {module.columns.map((column) => (
-                  <th key={column.key} className={cn("border-b border-line-1 px-4", column.align === "right" && "text-right")}>
+                  <ResizableHeaderCell
+                    key={column.key}
+                    width={getColumnStyle(column.key).width}
+                    minWidth={getColumnStyle(column.key).minWidth}
+                    maxWidth={getColumnStyle(column.key).maxWidth}
+                    className={cn(column.align === "right" && "text-right")}
+                    resizable={column.resizable !== false}
+                    onResizeStart={(clientX) => startResize(column.key, clientX)}
+                  >
                     <TableSortHeader
                       label={column.label}
                       sortKey={column.key}
@@ -289,7 +353,7 @@ function PriorityQueryListPage({ view }: { view: "sales-query" }) {
                       onSort={handleSort}
                       align={column.align === "right" ? "right" : "left"}
                     />
-                  </th>
+                  </ResizableHeaderCell>
                 ))}
               </tr>
             </thead>
@@ -297,8 +361,10 @@ function PriorityQueryListPage({ view }: { view: "sales-query" }) {
               {paginatedRows.map((row, index) => (
                 <tr key={`${index}-${row[module.columns[0].key]}`} className="h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
                   {module.columns.map((column) => (
-                    <td key={column.key} className={cn("px-4 py-2.5", column.align === "right" && "text-right", column.kind === "status" && "min-w-[100px] whitespace-nowrap")}>
-                      {renderPriorityValue(row[column.key], column.kind, row[column.toneKey ?? "tone"] as Tone | undefined)}
+                    <td key={column.key} className={cn("px-4 py-2.5 whitespace-nowrap", column.align === "right" && "text-right")} style={getColumnStyle(column.key)} title={String(row[column.key] ?? "")}>
+                      <div className="overflow-hidden text-ellipsis">
+                        {renderPriorityValue(row[column.key], column.kind, row[column.toneKey ?? "tone"] as Tone | undefined)}
+                      </div>
                     </td>
                   ))}
                 </tr>

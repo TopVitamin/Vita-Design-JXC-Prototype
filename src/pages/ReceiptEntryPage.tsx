@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button, DateField, FormField, HintBox, Input, PageTitle, Select, TextArea } from "../components/Ui";
-import { receiptFormDefault } from "../data/mock";
+import { receiptFormDefault } from "../mocks/receipt";
 
 export function ReceiptEntryPage() {
   const [form, setForm] = useState(receiptFormDefault);

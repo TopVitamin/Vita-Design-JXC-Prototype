@@ -1,6 +1,6 @@
 import { startTransition, useDeferredValue, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Button, DateField, FilterActions, FilterField, FormField, HintBox, Input, PageTitle, Pagination, SearchInput, Select, StatusPill, TabBar, TableSortHeader, TextArea } from "../components/Ui";
+import { Button, DateField, FilterActions, FilterField, FormField, HintBox, Input, Message, PageTitle, Pagination, ResizableHeaderCell, SearchInput, Select, StatusPill, TabBar, TableSortHeader, TextArea, useResizableColumns } from "../components/Ui";
 import { Drawer } from "../components/Drawer";
 import { FilterItem } from "../components/FilterItem";
 import { SalesOrderSection } from "../components/SalesOrderWorkspace";
@@ -12,6 +12,7 @@ import {
   getCrudModuleRecord,
   getModuleDefinition,
   queryModuleViews,
+  saveCrudModuleRecord,
   type ConfigModuleDefinition,
   type CrudModuleDefinition,
   type CrudRecord,
@@ -21,8 +22,8 @@ import {
   type ModuleFilter,
   type QueryModuleDefinition,
   type Tone,
-} from "../data/modulePages";
-import type { ViewKey } from "../data/mock";
+} from "../contracts/modules";
+import type { ViewKey } from "../app/navigation";
 import { cn } from "../utils/cn";
 import { compareRecord, normalizeSortValue } from "../utils/sort";
 
@@ -37,7 +38,25 @@ export function GenericCrudListPage({ view }: { view: ViewKey }) {
   const [pageSize, setPageSize] = useState(10);
   const deferredKeyword = useDeferredValue(keyword);
 
+  // 启停用弹窗 state（仅 entity 类型使用）
+  const [statusTarget, setStatusTarget] = useState<CrudRecord | null>(null);
+  const [statusAction, setStatusAction] = useState<"启用" | "停用">("停用");
+  const [stopReason, setStopReason] = useState("");
+  const [stopReasonError, setStopReasonError] = useState("");
+
   if (!module) return null;
+
+  const listColumns = [
+    ...module.columns.map((column) => ({
+      key: column.key,
+      width: column.width ?? (column.kind === "status" ? 120 : column.kind === "money" ? 150 : 160),
+      minWidth: column.minWidth ?? (column.kind === "status" ? 110 : 120),
+      maxWidth: column.maxWidth,
+      resizable: column.resizable,
+    })),
+    { key: "__actions__", width: 160, minWidth: 140, resizable: false },
+  ];
+  const { containerRef, totalWidth, getColumnStyle, startResize } = useResizableColumns(`${view}:list`, listColumns);
 
   const filteredRows = useMemo(() => {
     const normalized = deferredKeyword.trim().toLowerCase();
@@ -82,6 +101,38 @@ export function GenericCrudListPage({ view }: { view: ViewKey }) {
     return filteredRows.slice(start, start + pageSize);
   }, [currentPage, filteredRows, pageSize]);
 
+  const openStatusModal = (record: CrudRecord, action: "启用" | "停用") => {
+    setStatusTarget(record);
+    setStatusAction(action);
+    setStopReason("");
+    setStopReasonError("");
+  };
+
+  const closeStatusModal = () => {
+    setStatusTarget(null);
+    setStopReason("");
+    setStopReasonError("");
+  };
+
+  const handleStatusConfirm = () => {
+    if (!statusTarget) return;
+    if (statusAction === "停用" && !stopReason.trim()) {
+      setStopReasonError("停用原因不能为空");
+      return;
+    }
+    const nextRecord: CrudRecord = {
+      ...statusTarget,
+      status: statusAction,
+      statusTone: statusAction === "启用" ? "green" : "gray",
+      stopReason: statusAction === "停用" ? stopReason.trim() : "",
+    };
+    saveCrudModuleRecord(view, nextRecord, "edit");
+    Message.success(statusAction === "启用" ? `${module.singular}已启用` : `${module.singular}已停用`, 2000);
+    closeStatusModal();
+    // 强制列表刷新：重置筛选触发 useMemo 重算
+    setSelectFilters((s) => ({ ...s }));
+  };
+
   return (
     <div className="flex flex-col gap-4">
       {module.statusTabs ? (
@@ -113,12 +164,20 @@ export function GenericCrudListPage({ view }: { view: ViewKey }) {
         </div>
 
         <div className="overflow-hidden rounded-xl border border-line-1 shadow-soft">
-          <div className="overflow-x-auto">
-          <table className="min-w-[1100px] border-collapse text-sm lg:min-w-full">
+          <div ref={containerRef} className="overflow-x-auto">
+          <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, 1100) }}>
             <thead className="bg-fill-2 text-left text-text-2">
               <tr className="h-[44px]">
                 {module.columns.map((column) => (
-                  <th key={column.key} className={cn("border-b border-r border-line-1 px-4", column.align === "right" && "text-right")}>
+                  <ResizableHeaderCell
+                    key={column.key}
+                    width={getColumnStyle(column.key).width}
+                    minWidth={getColumnStyle(column.key).minWidth}
+                    maxWidth={getColumnStyle(column.key).maxWidth}
+                    className={cn(column.align === "right" && "text-right")}
+                    resizable={column.resizable !== false}
+                    onResizeStart={(clientX) => startResize(column.key, clientX)}
+                  >
                     <TableSortHeader
                       label={column.label}
                       sortKey={column.key}
@@ -126,23 +185,30 @@ export function GenericCrudListPage({ view }: { view: ViewKey }) {
                       onSort={handleSort}
                       align={column.align === "right" ? "right" : "left"}
                     />
-                  </th>
+                  </ResizableHeaderCell>
                 ))}
-                <th className="min-w-[120px] whitespace-nowrap border-b border-line-1 px-4 text-center">操作</th>
+                <ResizableHeaderCell width={getColumnStyle("__actions__").width} minWidth={getColumnStyle("__actions__").minWidth} resizable={false} className="border-r-0 text-center">操作</ResizableHeaderCell>
               </tr>
             </thead>
             <tbody>
               {paginatedRows.map((record) => (
                 <tr key={record.id} className="h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
                   {module.columns.map((column) => (
-                    <td key={column.key} className={cn("border-r border-line-1 px-4", column.align === "right" && "text-right")}>
-                      {renderColumnValue(record, column)}
+                    <td key={column.key} className={cn("border-r border-line-1 px-4 whitespace-nowrap", column.align === "right" && "text-right")} style={getColumnStyle(column.key)} title={String(record[column.key] ?? "")}>
+                      <div className="overflow-hidden text-ellipsis">
+                        {renderColumnValue(record, column)}
+                      </div>
                     </td>
                   ))}
-                  <td className="min-w-[120px] whitespace-nowrap px-4">
+                  <td className="px-4 whitespace-nowrap" style={getColumnStyle("__actions__")}>
                     <div className="flex items-center justify-center gap-2">
-                      <Button size="sm" onClick={() => navigate(`/${view}/${record.id}`)}>详情</Button>
+                      <Button size="sm" onClick={() => navigate(`/${view}/${record.id}`)}>查看</Button>
                       <Button size="sm" onClick={() => navigate(`/${view}/${record.id}/edit`)}>编辑</Button>
+                      {module.kind === "entity" && (
+                        record.status === "启用"
+                          ? <Button size="sm" onClick={() => openStatusModal(record, "停用")}>停用</Button>
+                          : <Button size="sm" tone="primary" onClick={() => openStatusModal(record, "启用")}>启用</Button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -163,9 +229,41 @@ export function GenericCrudListPage({ view }: { view: ViewKey }) {
           }}
         />
       </div>
+
+      {/* 启停用确认弹窗 */}
+      {statusTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="w-[420px] rounded-xl border border-line-1 bg-white p-6 shadow-xl">
+            <div className="mb-4 text-[15px] font-semibold text-text-1">
+              确认{statusAction}：{String(statusTarget.name ?? statusTarget.code ?? "")}
+            </div>
+            {statusAction === "停用" ? (
+              <div className="mb-4 space-y-1">
+                <div className="text-[13px] text-text-2">停用原因 <span className="text-red-500">*</span></div>
+                <TextArea
+                  value={stopReason}
+                  onChange={(v) => { setStopReason(v); if (v.trim()) setStopReasonError(""); }}
+                  maxLength={100}
+                  placeholder="请填写停用原因"
+                />
+                {stopReasonError && <div className="text-[12px] text-red-500">{stopReasonError}</div>}
+              </div>
+            ) : (
+              <div className="mb-4 text-[13px] text-text-2">
+                启用后该{module.singular}可重新在新单中选择。
+              </div>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button onClick={closeStatusModal}>取消</Button>
+              <Button tone="primary" onClick={handleStatusConfirm}>确认{statusAction}</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
 
 export function GenericCrudCreatePage({ view }: { view: ViewKey }) {
   return <GenericCrudEditorPage view={view} mode="create" />;
@@ -190,11 +288,11 @@ export function GenericCrudEditorPage({
     [mode, recordId, view],
   );
   const [form, setForm] = useState<Record<string, any>>(sourceRecord ?? {});
-  const [message, setMessage] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     setForm(sourceRecord ?? {});
-    setMessage(null);
+    setErrors({});
   }, [recordId, sourceRecord]);
 
   if (!module || !sourceRecord) {
@@ -213,7 +311,38 @@ export function GenericCrudEditorPage({
   const totalAmount = lines.reduce((sum, item) => sum + Number(item.amount ?? 0), 0);
 
   const updateField = (key: string, value: string) => {
-    setForm((current) => ({ ...current, [key]: value }));
+    const field = module.formSections.flatMap((section) => section.fields).find((item) => item.key === key);
+    const transformedValue = field?.inputTransform ? field.inputTransform(value) : value;
+
+    setForm((current) => (
+      module.transformForm
+        ? module.transformForm({ form: current, key, value: transformedValue, mode, sourceRecord })
+        : { ...current, [key]: transformedValue }
+    ));
+    setErrors((current) => {
+      const next = { ...current };
+      delete next[key];
+      if (key === "settlementMethod") {
+        delete next.accountPeriodDays;
+        delete next.creditLimit;
+      }
+
+      if (field?.inputTransform && transformedValue !== value && field.patternMessage) {
+        next[key] = field.patternMessage;
+        return next;
+      }
+
+      if (field?.minLength && transformedValue.trim().length > 0 && transformedValue.trim().length < field.minLength) {
+        next[key] = `${field.label}长度不可少于${field.minLength}个字符`;
+        return next;
+      }
+
+      if (field?.pattern && transformedValue.trim() && !field.pattern.test(transformedValue.trim())) {
+        next[key] = field.patternMessage ?? `${field.label}格式不正确`;
+      }
+
+      return next;
+    });
   };
 
   const updateLine = (lineId: string, key: string, value: string) => {
@@ -245,7 +374,7 @@ export function GenericCrudEditorPage({
         { id: `${view}-line-${Date.now()}`, code: "", name: "", spec: "", qty: 1, unit: "件", price: 0, amount: 0, note: "" },
       ],
     }));
-    setMessage("已新增一行明细。");
+    Message.success("已新增一行明细。", 2000);
   };
 
   const removeLine = (lineId: string) => {
@@ -255,19 +384,78 @@ export function GenericCrudEditorPage({
     }));
   };
 
+  const validateForm = () => {
+    const nextErrors: Record<string, string> = {};
+
+    module.formSections.forEach((section) => {
+      section.fields.forEach((field) => {
+        const rawValue = String(form[field.key] ?? "");
+        const value = rawValue.trim();
+        const statusValue = String(form.status ?? "");
+
+        if (isFieldRequired(field, form, mode) && !value) {
+          nextErrors[field.key] = `${field.label}不能为空`;
+        }
+
+        if (field.maxLength && rawValue.length > field.maxLength) {
+          nextErrors[field.key] = `${field.label}长度不可超过${field.maxLength}个字符`;
+        }
+
+        if (field.minLength && value && value.length < field.minLength) {
+          nextErrors[field.key] = `${field.label}长度不可少于${field.minLength}个字符`;
+        }
+
+        if (field.pattern && value && !field.pattern.test(value)) {
+          nextErrors[field.key] = field.patternMessage ?? `${field.label}格式不正确`;
+        }
+
+        if (field.key === "stopReason" && statusValue === "停用" && !value) {
+          nextErrors[field.key] = "停用原因不能为空";
+        }
+      });
+    });
+
+    if (module.kind === "entity" && String(form.code ?? "").trim()) {
+      const duplicated = module.records.find(
+        (record) => String(record.code ?? "").trim() === String(form.code ?? "").trim() && record.id !== form.id,
+      );
+      if (duplicated) {
+        nextErrors.code = `${module.singular}编码已存在`;
+      }
+    }
+
+    if (module.validateForm) {
+      Object.assign(nextErrors, module.validateForm({ form, mode, sourceRecord, module }));
+    }
+
+    setErrors(nextErrors);
+    return nextErrors;
+  };
+
   const handleSave = () => {
-    setMessage(`${module.singular}已保存。`);
+    const nextErrors = validateForm();
+    if (Object.keys(nextErrors).length > 0) {
+      Message.error("请完善必填信息后再保存。", 3000);
+      return;
+    }
+
+    const saved = saveCrudModuleRecord(view, form as CrudRecord, mode);
+    if (!saved) {
+      Message.error(`${module.singular}保存失败。`, 3000);
+      return;
+    }
+    Message.success("保存成功", 2000);
+    navigate(`/${view}`);
   };
 
   return (
     <div className="space-y-4">
       <PageTitle title={mode === "create" ? `新增${module.singular}` : `编辑${module.singular}`} />
-      {message ? <HintBox>{message}</HintBox> : null}
 
       <div className="space-y-4">
         {module.formSections.map((section) => (
           <SalesOrderSection key={section.title} title={section.title}>
-            <ModuleFormGrid fields={section.fields} form={form} onFieldChange={updateField} />
+            <ModuleFormGrid fields={section.fields} form={form} onFieldChange={updateField} errors={errors} mode={mode} />
           </SalesOrderSection>
         ))}
 
@@ -329,6 +517,9 @@ export function GenericCrudDetailPage({ view }: { view: ViewKey }) {
   const module = getCrudModuleDefinition(view);
   const record = getCrudModuleRecord(view, recordId);
   const [activeTab, setActiveTab] = useState(module?.kind === "document" ? "detail" : "profile");
+  const [statusAction, setStatusAction] = useState<"启用" | "停用" | null>(null);
+  const [stopReason, setStopReason] = useState("");
+  const [stopReasonError, setStopReasonError] = useState("");
 
   useEffect(() => {
     setActiveTab(module?.kind === "document" ? "detail" : "profile");
@@ -360,9 +551,14 @@ export function GenericCrudDetailPage({ view }: { view: ViewKey }) {
   return (
     <div className="space-y-4">
       <PageTitle
-        title={`${module.title}详情`}
+        title={module.kind === "entity" ? `${module.singular}详情` : `${module.title}详情`}
         actions={
           <>
+            {module.kind === "entity" ? (
+              String(record.status) === "启用"
+                ? <Button onClick={() => setStatusAction("停用")}>停用</Button>
+                : <Button tone="primary" onClick={() => setStatusAction("启用")}>启用</Button>
+            ) : null}
             <Button tone="primary" onClick={() => navigate(`/${view}/${record.id}/edit`)}>编辑</Button>
             <Button onClick={() => navigate(`/${view}/new`)}>复制新增</Button>
             <Button onClick={() => navigate(`/${view}`)}>返回列表</Button>
@@ -456,7 +652,7 @@ export function GenericCrudDetailPage({ view }: { view: ViewKey }) {
 
       {activeTab === "logs" ? (
         <SalesOrderSection title="操作日志">
-          <ModuleLogTable logs={(record.logs ?? []) as any[]} />
+          <ModuleLogTable logs={(record.logs ?? []) as any[]} tableId={`${view}-${record.id}`} />
         </SalesOrderSection>
       ) : null}
 
@@ -495,6 +691,50 @@ export function GenericCrudDetailPage({ view }: { view: ViewKey }) {
           </SalesOrderSection>
         </div>
       ) : null}
+
+      {module.kind === "entity" && statusAction ? (
+        <EntityStatusDialog
+          singular={module.singular}
+          name={String(record.name ?? record.code ?? "")}
+          action={statusAction}
+          stopReason={stopReason}
+          stopReasonError={stopReasonError}
+          onStopReasonChange={(value) => {
+            setStopReason(value);
+            if (value.trim()) setStopReasonError("");
+          }}
+          onCancel={() => {
+            setStatusAction(null);
+            setStopReason("");
+            setStopReasonError("");
+          }}
+          onConfirm={() => {
+            if (statusAction === "停用" && !stopReason.trim()) {
+              setStopReasonError("停用原因不能为空");
+              return;
+            }
+
+            const saved = saveCrudModuleRecord(
+              view,
+              {
+                ...record,
+                status: statusAction,
+                statusTone: statusAction === "启用" ? "green" : "gray",
+                stopReason: statusAction === "停用" ? stopReason.trim() : "",
+              },
+              "edit",
+            );
+
+            if (!saved) {
+              Message.error(`${module.singular}状态更新失败`, 3000);
+              return;
+            }
+
+            Message.success(statusAction === "启用" ? `${module.singular}已启用` : `${module.singular}已停用`, 2000);
+            navigate(`/${view}`);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -509,6 +749,15 @@ export function GenericQueryPage({ view }: { view: ViewKey }) {
   const deferredKeyword = useDeferredValue(keyword);
 
   if (!module || !queryModuleViews.includes(view)) return null;
+
+  const queryColumns = module.columns.map((column) => ({
+    key: column.key,
+    width: column.width ?? (column.kind === "status" ? 120 : column.align === "right" ? 140 : 160),
+    minWidth: column.minWidth ?? (column.kind === "status" ? 110 : 120),
+    maxWidth: column.maxWidth,
+    resizable: column.resizable,
+  }));
+  const { containerRef, totalWidth, getColumnStyle, startResize } = useResizableColumns(`${view}:query`, queryColumns);
 
   const filteredRows = useMemo(() => {
     const normalized = deferredKeyword.trim().toLowerCase();
@@ -564,12 +813,22 @@ export function GenericQueryPage({ view }: { view: ViewKey }) {
         </div>
 
         <div className="overflow-hidden rounded-xl border border-line-1 shadow-soft">
-          <div className="overflow-x-auto">
-            <table className="min-w-[1100px] border-collapse text-sm lg:min-w-full">
+          <div ref={containerRef} className="overflow-x-auto">
+            <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, 1100) }}>
               <thead className="bg-fill-2 text-left text-text-2">
                 <tr className="h-[44px]">
                   {module.columns.map((column) => (
-                    <th key={column.key} className={cn("border-b border-r border-line-1 px-4", column.align === "right" && "text-right")}>{column.label}</th>
+                    <ResizableHeaderCell
+                      key={column.key}
+                      width={getColumnStyle(column.key).width}
+                      minWidth={getColumnStyle(column.key).minWidth}
+                      maxWidth={getColumnStyle(column.key).maxWidth}
+                      className={cn(column.align === "right" && "text-right")}
+                      resizable={column.resizable !== false}
+                      onResizeStart={(clientX) => startResize(column.key, clientX)}
+                    >
+                      {column.label}
+                    </ResizableHeaderCell>
                   ))}
                 </tr>
               </thead>
@@ -577,8 +836,10 @@ export function GenericQueryPage({ view }: { view: ViewKey }) {
                 {paginatedRows.map((row, index) => (
                   <tr key={`${index}-${row[module.columns[0].key]}`} className="h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
                     {module.columns.map((column) => (
-                      <td key={column.key} className={cn("border-r border-line-1 px-4", column.align === "right" && "text-right", column.kind === "status" && "min-w-[100px] whitespace-nowrap")}>
-                        {renderGenericValue(row[column.key], column.kind, row[column.toneKey ?? "tone"] as Tone | undefined)}
+                      <td key={column.key} className={cn("border-r border-line-1 px-4 whitespace-nowrap", column.align === "right" && "text-right")} style={getColumnStyle(column.key)} title={String(row[column.key] ?? "")}>
+                        <div className="overflow-hidden text-ellipsis">
+                          {renderGenericValue(row[column.key], column.kind, row[column.toneKey ?? "tone"] as Tone | undefined)}
+                        </div>
                       </td>
                     ))}
                   </tr>
@@ -607,13 +868,11 @@ export function GenericFormPage({ view }: { view: ViewKey }) {
   const navigate = useNavigate();
   const module = getModuleDefinition(view) as FormModuleDefinition | undefined;
   const [form, setForm] = useState<Record<string, string>>({});
-  const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!module) return;
     const defaults = Object.fromEntries(module.sections.flatMap((section) => section.fields.map((field) => [field.key, ""])));
     setForm(defaults);
-    setMessage(null);
   }, [module]);
 
   if (!module || !formModuleViews.includes(view)) return null;
@@ -621,12 +880,11 @@ export function GenericFormPage({ view }: { view: ViewKey }) {
   return (
     <div className="space-y-4">
       <PageTitle title={module.title}>{module.description}</PageTitle>
-      {message ? <HintBox>{message}</HintBox> : null}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-4">
           {module.sections.map((section) => (
             <SalesOrderSection key={section.title} title={section.title}>
-              <ModuleFormGrid fields={section.fields} form={form} onFieldChange={(key, value) => setForm((current) => ({ ...current, [key]: value }))} />
+              <ModuleFormGrid fields={section.fields} form={form} onFieldChange={(key, value) => setForm((current) => ({ ...current, [key]: value }))} mode="create" />
             </SalesOrderSection>
           ))}
         </div>
@@ -642,7 +900,7 @@ export function GenericFormPage({ view }: { view: ViewKey }) {
         </SalesOrderSection>
       </div>
       <div className="flex flex-col gap-3 border-t border-line-1 pt-4 sm:flex-row sm:justify-end">
-        <Button tone="primary" onClick={() => setMessage(`${module.title}已保存。`)}>保存</Button>
+        <Button tone="primary" onClick={() => Message.success(`${module.title}已保存。`, 2000)}>保存</Button>
         <Button onClick={() => navigate(`/${view}`)}>返回列表</Button>
       </div>
     </div>
@@ -674,6 +932,40 @@ export function GenericConfigPage({ view }: { view: ViewKey }) {
       else if (module.logs && view === "operation-log") setSelectedTab("logs");
     }
   }, [module, view]);
+
+  const userTable = useResizableColumns(`${view}:config-users`, [
+    { key: "username", width: 140, minWidth: 120 },
+    { key: "name", width: 120, minWidth: 100 },
+    { key: "role", width: 140, minWidth: 120 },
+    { key: "department", width: 120, minWidth: 100 },
+    { key: "status", width: 110, minWidth: 100 },
+    { key: "lastLogin", width: 170, minWidth: 150 },
+    { key: "__actions__", width: 140, minWidth: 120, resizable: false },
+  ]);
+  const roleTable = useResizableColumns(`${view}:config-roles`, [
+    { key: "roleName", width: 140, minWidth: 120 },
+    { key: "roleCode", width: 140, minWidth: 120 },
+    { key: "userCount", width: 100, minWidth: 90 },
+    { key: "description", width: 240, minWidth: 180 },
+    { key: "__actions__", width: 120, minWidth: 120, resizable: false },
+  ]);
+  const ruleTable = useResizableColumns(`${view}:config-rules`, [
+    { key: "docType", width: 140, minWidth: 120 },
+    { key: "prefix", width: 120, minWidth: 100 },
+    { key: "dateFormat", width: 140, minWidth: 120 },
+    { key: "sequence", width: 120, minWidth: 100 },
+    { key: "resetType", width: 120, minWidth: 100 },
+    { key: "status", width: 110, minWidth: 100 },
+    { key: "__actions__", width: 100, minWidth: 100, resizable: false },
+  ]);
+  const templateTable = useResizableColumns(`${view}:config-templates`, [
+    { key: "docType", width: 140, minWidth: 120 },
+    { key: "templateName", width: 180, minWidth: 140 },
+    { key: "paperSize", width: 120, minWidth: 100 },
+    { key: "isDefault", width: 120, minWidth: 100 },
+    { key: "updatedAt", width: 170, minWidth: 150 },
+    { key: "__actions__", width: 140, minWidth: 120, resizable: false },
+  ]);
 
   if (!module || !configModuleViews.includes(view)) return null;
 
@@ -720,33 +1012,33 @@ export function GenericConfigPage({ view }: { view: ViewKey }) {
               <Button>导出</Button>
             </div>
             <div className="overflow-hidden rounded-xl border border-line-1 shadow-soft">
-              <div className="overflow-x-auto">
-                <table className="min-w-[900px] border-collapse text-sm lg:min-w-full">
+              <div ref={userTable.containerRef} className="overflow-x-auto">
+                <table className="border-collapse text-sm" style={{ minWidth: Math.max(userTable.totalWidth, 900) }}>
                   <thead className="bg-fill-2 text-left text-text-2">
                     <tr className="h-[44px]">
-                      <th className="border-b border-r border-line-1 px-4">用户名</th>
-                      <th className="border-b border-r border-line-1 px-4">姓名</th>
-                      <th className="border-b border-r border-line-1 px-4">角色</th>
-                      <th className="border-b border-r border-line-1 px-4">部门</th>
-                      <th className="border-b border-r border-line-1 px-4">状态</th>
-                      <th className="border-b border-r border-line-1 px-4">最后登录</th>
-                      <th className="min-w-[120px] whitespace-nowrap border-b border-line-1 px-4 text-center">操作</th>
+                      <ResizableHeaderCell width={userTable.getColumnStyle("username").width} minWidth={userTable.getColumnStyle("username").minWidth} onResizeStart={(clientX) => userTable.startResize("username", clientX)}>用户名</ResizableHeaderCell>
+                      <ResizableHeaderCell width={userTable.getColumnStyle("name").width} minWidth={userTable.getColumnStyle("name").minWidth} onResizeStart={(clientX) => userTable.startResize("name", clientX)}>姓名</ResizableHeaderCell>
+                      <ResizableHeaderCell width={userTable.getColumnStyle("role").width} minWidth={userTable.getColumnStyle("role").minWidth} onResizeStart={(clientX) => userTable.startResize("role", clientX)}>角色</ResizableHeaderCell>
+                      <ResizableHeaderCell width={userTable.getColumnStyle("department").width} minWidth={userTable.getColumnStyle("department").minWidth} onResizeStart={(clientX) => userTable.startResize("department", clientX)}>部门</ResizableHeaderCell>
+                      <ResizableHeaderCell width={userTable.getColumnStyle("status").width} minWidth={userTable.getColumnStyle("status").minWidth} onResizeStart={(clientX) => userTable.startResize("status", clientX)}>状态</ResizableHeaderCell>
+                      <ResizableHeaderCell width={userTable.getColumnStyle("lastLogin").width} minWidth={userTable.getColumnStyle("lastLogin").minWidth} onResizeStart={(clientX) => userTable.startResize("lastLogin", clientX)}>最后登录</ResizableHeaderCell>
+                      <ResizableHeaderCell width={userTable.getColumnStyle("__actions__").width} minWidth={userTable.getColumnStyle("__actions__").minWidth} resizable={false} className="border-r-0 text-center">操作</ResizableHeaderCell>
                     </tr>
                   </thead>
                   <tbody>
                     {module.users?.map((user) => (
                       <tr key={user.id} className="h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
-                        <td className="border-r border-line-1 px-4 text-brand-6">{user.username}</td>
-                        <td className="border-r border-line-1 px-4 text-text-1">{user.name}</td>
-                        <td className="border-r border-line-1 px-4">
+                        <td className="border-r border-line-1 px-4 text-brand-6 whitespace-nowrap" style={userTable.getColumnStyle("username")}>{user.username}</td>
+                        <td className="border-r border-line-1 px-4 text-text-1 whitespace-nowrap" style={userTable.getColumnStyle("name")}>{user.name}</td>
+                        <td className="border-r border-line-1 px-4 whitespace-nowrap" style={userTable.getColumnStyle("role")}>
                           <StatusPill tone={(user.roleTone as Tone) ?? "gray"}>{user.role}</StatusPill>
                         </td>
-                        <td className="border-r border-line-1 px-4">{user.department}</td>
-                        <td className="border-r border-line-1 px-4">
+                        <td className="border-r border-line-1 px-4 whitespace-nowrap" style={userTable.getColumnStyle("department")}>{user.department}</td>
+                        <td className="border-r border-line-1 px-4 whitespace-nowrap" style={userTable.getColumnStyle("status")}>
                           <StatusPill tone={(user.statusTone as Tone) ?? "gray"}>{user.status}</StatusPill>
                         </td>
-                        <td className="border-r border-line-1 px-4">{user.lastLogin}</td>
-                        <td className="min-w-[120px] whitespace-nowrap px-4">
+                        <td className="border-r border-line-1 px-4 whitespace-nowrap" style={userTable.getColumnStyle("lastLogin")}>{user.lastLogin}</td>
+                        <td className="px-4 whitespace-nowrap" style={userTable.getColumnStyle("__actions__")}>
                           <div className="flex items-center justify-center gap-2">
                             <Button size="sm">编辑</Button>
                             <Button size="sm">{user.status === "启用" ? "禁用" : "启用"}</Button>
@@ -768,25 +1060,25 @@ export function GenericConfigPage({ view }: { view: ViewKey }) {
               <Button tone="primary" onClick={() => setIsRoleDrawerOpen(true)}>新增角色</Button>
             </div>
             <div className="overflow-hidden rounded-xl border border-line-1 shadow-soft">
-              <div className="overflow-x-auto">
-                <table className="min-w-[700px] border-collapse text-sm lg:min-w-full">
+              <div ref={roleTable.containerRef} className="overflow-x-auto">
+                <table className="border-collapse text-sm" style={{ minWidth: Math.max(roleTable.totalWidth, 700) }}>
                   <thead className="bg-fill-2 text-left text-text-2">
                     <tr className="h-[44px]">
-                      <th className="border-b border-r border-line-1 px-4">角色名称</th>
-                      <th className="border-b border-r border-line-1 px-4">角色编码</th>
-                      <th className="border-b border-r border-line-1 px-4">用户数</th>
-                      <th className="border-b border-r border-line-1 px-4">说明</th>
-                      <th className="min-w-[120px] whitespace-nowrap border-b border-line-1 px-4 text-center">操作</th>
+                      <ResizableHeaderCell width={roleTable.getColumnStyle("roleName").width} minWidth={roleTable.getColumnStyle("roleName").minWidth} onResizeStart={(clientX) => roleTable.startResize("roleName", clientX)}>角色名称</ResizableHeaderCell>
+                      <ResizableHeaderCell width={roleTable.getColumnStyle("roleCode").width} minWidth={roleTable.getColumnStyle("roleCode").minWidth} onResizeStart={(clientX) => roleTable.startResize("roleCode", clientX)}>角色编码</ResizableHeaderCell>
+                      <ResizableHeaderCell width={roleTable.getColumnStyle("userCount").width} minWidth={roleTable.getColumnStyle("userCount").minWidth} onResizeStart={(clientX) => roleTable.startResize("userCount", clientX)}>用户数</ResizableHeaderCell>
+                      <ResizableHeaderCell width={roleTable.getColumnStyle("description").width} minWidth={roleTable.getColumnStyle("description").minWidth} onResizeStart={(clientX) => roleTable.startResize("description", clientX)}>说明</ResizableHeaderCell>
+                      <ResizableHeaderCell width={roleTable.getColumnStyle("__actions__").width} minWidth={roleTable.getColumnStyle("__actions__").minWidth} resizable={false} className="border-r-0 text-center">操作</ResizableHeaderCell>
                     </tr>
                   </thead>
                   <tbody>
                     {module.roles?.map((role) => (
                       <tr key={role.id} className="h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
-                        <td className="border-r border-line-1 px-4 font-medium text-text-1">{role.roleName}</td>
-                        <td className="border-r border-line-1 px-4">{role.roleCode}</td>
-                        <td className="border-r border-line-1 px-4">{role.userCount}</td>
-                        <td className="border-r border-line-1 px-4">{role.description}</td>
-                        <td className="min-w-[120px] whitespace-nowrap px-4">
+                        <td className="border-r border-line-1 px-4 font-medium text-text-1 whitespace-nowrap" style={roleTable.getColumnStyle("roleName")}>{role.roleName}</td>
+                        <td className="border-r border-line-1 px-4 whitespace-nowrap" style={roleTable.getColumnStyle("roleCode")}>{role.roleCode}</td>
+                        <td className="border-r border-line-1 px-4 whitespace-nowrap" style={roleTable.getColumnStyle("userCount")}>{role.userCount}</td>
+                        <td className="border-r border-line-1 px-4 whitespace-nowrap" style={roleTable.getColumnStyle("description")} title={String(role.description ?? "")}><div className="overflow-hidden text-ellipsis">{role.description}</div></td>
+                        <td className="px-4 whitespace-nowrap" style={roleTable.getColumnStyle("__actions__")}>
                           <div className="flex items-center justify-center gap-2">
                             <Button size="sm">编辑</Button>
                             <Button size="sm">权限</Button>
@@ -823,7 +1115,7 @@ export function GenericConfigPage({ view }: { view: ViewKey }) {
 
         {module.logs ? (
           <SalesOrderSection title="最近操作">
-            <ModuleLogTable logs={module.logs} />
+            <ModuleLogTable logs={module.logs} tableId={`${view}-recent`} />
           </SalesOrderSection>
         ) : null}
 
@@ -891,36 +1183,36 @@ export function GenericConfigPage({ view }: { view: ViewKey }) {
     return (
       <div className="space-y-4">
         <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-2.5">
-            <Button tone="primary" onClick={() => setIsRuleDrawerOpen(true)}>新增规则</Button>
-            <Button>导出</Button>
-          </div>
-          <div className="overflow-hidden rounded-xl border border-line-1 shadow-soft">
-            <div className="overflow-x-auto">
-              <table className="min-w-[800px] border-collapse text-sm lg:min-w-full">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Button tone="primary" onClick={() => setIsRuleDrawerOpen(true)}>新增规则</Button>
+              <Button>导出</Button>
+            </div>
+            <div className="overflow-hidden rounded-xl border border-line-1 shadow-soft">
+              <div ref={ruleTable.containerRef} className="overflow-x-auto">
+              <table className="border-collapse text-sm" style={{ minWidth: Math.max(ruleTable.totalWidth, 800) }}>
                 <thead className="bg-fill-2 text-left text-text-2">
                   <tr className="h-[44px]">
-                    <th className="border-b border-r border-line-1 px-4">单据类型</th>
-                    <th className="border-b border-r border-line-1 px-4">前缀</th>
-                    <th className="border-b border-r border-line-1 px-4">日期格式</th>
-                    <th className="border-b border-r border-line-1 px-4">序号位数</th>
-                    <th className="border-b border-r border-line-1 px-4">重置方式</th>
-                    <th className="border-b border-r border-line-1 px-4">状态</th>
-                    <th className="min-w-[100px] whitespace-nowrap border-b border-line-1 px-4 text-center">操作</th>
+                    <ResizableHeaderCell width={ruleTable.getColumnStyle("docType").width} minWidth={ruleTable.getColumnStyle("docType").minWidth} onResizeStart={(clientX) => ruleTable.startResize("docType", clientX)}>单据类型</ResizableHeaderCell>
+                    <ResizableHeaderCell width={ruleTable.getColumnStyle("prefix").width} minWidth={ruleTable.getColumnStyle("prefix").minWidth} onResizeStart={(clientX) => ruleTable.startResize("prefix", clientX)}>前缀</ResizableHeaderCell>
+                    <ResizableHeaderCell width={ruleTable.getColumnStyle("dateFormat").width} minWidth={ruleTable.getColumnStyle("dateFormat").minWidth} onResizeStart={(clientX) => ruleTable.startResize("dateFormat", clientX)}>日期格式</ResizableHeaderCell>
+                    <ResizableHeaderCell width={ruleTable.getColumnStyle("sequence").width} minWidth={ruleTable.getColumnStyle("sequence").minWidth} onResizeStart={(clientX) => ruleTable.startResize("sequence", clientX)}>序号位数</ResizableHeaderCell>
+                    <ResizableHeaderCell width={ruleTable.getColumnStyle("resetType").width} minWidth={ruleTable.getColumnStyle("resetType").minWidth} onResizeStart={(clientX) => ruleTable.startResize("resetType", clientX)}>重置方式</ResizableHeaderCell>
+                    <ResizableHeaderCell width={ruleTable.getColumnStyle("status").width} minWidth={ruleTable.getColumnStyle("status").minWidth} onResizeStart={(clientX) => ruleTable.startResize("status", clientX)}>状态</ResizableHeaderCell>
+                    <ResizableHeaderCell width={ruleTable.getColumnStyle("__actions__").width} minWidth={ruleTable.getColumnStyle("__actions__").minWidth} resizable={false} className="border-r-0 text-center">操作</ResizableHeaderCell>
                   </tr>
                 </thead>
                 <tbody>
                   {module.rules?.map((rule) => (
                     <tr key={rule.id} className="h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
-                      <td className="border-r border-line-1 px-4 font-medium text-text-1">{rule.docType}</td>
-                      <td className="border-r border-line-1 px-4">{rule.prefix}</td>
-                      <td className="border-r border-line-1 px-4">{rule.dateFormat}</td>
-                      <td className="border-r border-line-1 px-4">{rule.sequence}</td>
-                      <td className="border-r border-line-1 px-4">{rule.resetType}</td>
-                      <td className="border-r border-line-1 px-4">
+                      <td className="border-r border-line-1 px-4 font-medium text-text-1 whitespace-nowrap" style={ruleTable.getColumnStyle("docType")}>{rule.docType}</td>
+                      <td className="border-r border-line-1 px-4 whitespace-nowrap" style={ruleTable.getColumnStyle("prefix")}>{rule.prefix}</td>
+                      <td className="border-r border-line-1 px-4 whitespace-nowrap" style={ruleTable.getColumnStyle("dateFormat")}>{rule.dateFormat}</td>
+                      <td className="border-r border-line-1 px-4 whitespace-nowrap" style={ruleTable.getColumnStyle("sequence")}>{rule.sequence}</td>
+                      <td className="border-r border-line-1 px-4 whitespace-nowrap" style={ruleTable.getColumnStyle("resetType")}>{rule.resetType}</td>
+                      <td className="border-r border-line-1 px-4 whitespace-nowrap" style={ruleTable.getColumnStyle("status")}>
                         <StatusPill tone={(rule.statusTone as Tone) ?? "gray"}>{rule.status}</StatusPill>
                       </td>
-                      <td className="min-w-[100px] whitespace-nowrap px-4">
+                      <td className="px-4 whitespace-nowrap" style={ruleTable.getColumnStyle("__actions__")}>
                         <div className="flex items-center justify-center gap-2">
                           <Button size="sm">编辑</Button>
                         </div>
@@ -935,7 +1227,7 @@ export function GenericConfigPage({ view }: { view: ViewKey }) {
 
         {module.logs ? (
           <SalesOrderSection title="最近操作">
-            <ModuleLogTable logs={module.logs} />
+            <ModuleLogTable logs={module.logs} tableId={`${view}-recent`} />
           </SalesOrderSection>
         ) : null}
 
@@ -999,7 +1291,7 @@ export function GenericConfigPage({ view }: { view: ViewKey }) {
         </div>
 
         <SalesOrderSection title="操作记录">
-          <ModuleLogTable logs={module.logs ?? []} />
+          <ModuleLogTable logs={module.logs ?? []} tableId={`${view}-logs`} />
         </SalesOrderSection>
       </div>
     );
@@ -1010,34 +1302,34 @@ export function GenericConfigPage({ view }: { view: ViewKey }) {
     return (
       <div className="space-y-4">
         <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-2.5">
-            <Button tone="primary" onClick={() => setIsTemplateDrawerOpen(true)}>新增模板</Button>
-            <Button>批量导入</Button>
-          </div>
-          <div className="overflow-hidden rounded-xl border border-line-1 shadow-soft">
-            <div className="overflow-x-auto">
-              <table className="min-w-[700px] border-collapse text-sm lg:min-w-full">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Button tone="primary" onClick={() => setIsTemplateDrawerOpen(true)}>新增模板</Button>
+              <Button>批量导入</Button>
+            </div>
+            <div className="overflow-hidden rounded-xl border border-line-1 shadow-soft">
+              <div ref={templateTable.containerRef} className="overflow-x-auto">
+              <table className="border-collapse text-sm" style={{ minWidth: Math.max(templateTable.totalWidth, 700) }}>
                 <thead className="bg-fill-2 text-left text-text-2">
                   <tr className="h-[44px]">
-                    <th className="border-b border-r border-line-1 px-4">单据类型</th>
-                    <th className="border-b border-r border-line-1 px-4">模板名称</th>
-                    <th className="border-b border-r border-line-1 px-4">纸张尺寸</th>
-                    <th className="border-b border-r border-line-1 px-4">默认模板</th>
-                    <th className="border-b border-r border-line-1 px-4">更新时间</th>
-                    <th className="min-w-[120px] whitespace-nowrap border-b border-line-1 px-4 text-center">操作</th>
+                    <ResizableHeaderCell width={templateTable.getColumnStyle("docType").width} minWidth={templateTable.getColumnStyle("docType").minWidth} onResizeStart={(clientX) => templateTable.startResize("docType", clientX)}>单据类型</ResizableHeaderCell>
+                    <ResizableHeaderCell width={templateTable.getColumnStyle("templateName").width} minWidth={templateTable.getColumnStyle("templateName").minWidth} onResizeStart={(clientX) => templateTable.startResize("templateName", clientX)}>模板名称</ResizableHeaderCell>
+                    <ResizableHeaderCell width={templateTable.getColumnStyle("paperSize").width} minWidth={templateTable.getColumnStyle("paperSize").minWidth} onResizeStart={(clientX) => templateTable.startResize("paperSize", clientX)}>纸张尺寸</ResizableHeaderCell>
+                    <ResizableHeaderCell width={templateTable.getColumnStyle("isDefault").width} minWidth={templateTable.getColumnStyle("isDefault").minWidth} onResizeStart={(clientX) => templateTable.startResize("isDefault", clientX)}>默认模板</ResizableHeaderCell>
+                    <ResizableHeaderCell width={templateTable.getColumnStyle("updatedAt").width} minWidth={templateTable.getColumnStyle("updatedAt").minWidth} onResizeStart={(clientX) => templateTable.startResize("updatedAt", clientX)}>更新时间</ResizableHeaderCell>
+                    <ResizableHeaderCell width={templateTable.getColumnStyle("__actions__").width} minWidth={templateTable.getColumnStyle("__actions__").minWidth} resizable={false} className="border-r-0 text-center">操作</ResizableHeaderCell>
                   </tr>
                 </thead>
                 <tbody>
                   {module.templates?.map((tpl) => (
                     <tr key={tpl.id} className="h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
-                      <td className="border-r border-line-1 px-4 font-medium text-text-1">{tpl.docType}</td>
-                      <td className="border-r border-line-1 px-4">{tpl.templateName}</td>
-                      <td className="border-r border-line-1 px-4">{tpl.paperSize}</td>
-                      <td className="border-r border-line-1 px-4">
+                      <td className="border-r border-line-1 px-4 font-medium text-text-1 whitespace-nowrap" style={templateTable.getColumnStyle("docType")}>{tpl.docType}</td>
+                      <td className="border-r border-line-1 px-4 whitespace-nowrap" style={templateTable.getColumnStyle("templateName")}>{tpl.templateName}</td>
+                      <td className="border-r border-line-1 px-4 whitespace-nowrap" style={templateTable.getColumnStyle("paperSize")}>{tpl.paperSize}</td>
+                      <td className="border-r border-line-1 px-4 whitespace-nowrap" style={templateTable.getColumnStyle("isDefault")}>
                         <StatusPill tone={(tpl.isDefaultTone as Tone) ?? "gray"}>{tpl.isDefault}</StatusPill>
                       </td>
-                      <td className="border-r border-line-1 px-4">{tpl.updatedAt}</td>
-                      <td className="min-w-[120px] whitespace-nowrap px-4">
+                      <td className="border-r border-line-1 px-4 whitespace-nowrap" style={templateTable.getColumnStyle("updatedAt")}>{tpl.updatedAt}</td>
+                      <td className="px-4 whitespace-nowrap" style={templateTable.getColumnStyle("__actions__")}>
                         <div className="flex items-center justify-center gap-2">
                           <Button size="sm">编辑</Button>
                           <Button size="sm">预览</Button>
@@ -1053,7 +1345,7 @@ export function GenericConfigPage({ view }: { view: ViewKey }) {
 
         {module.logs ? (
           <SalesOrderSection title="最近操作">
-            <ModuleLogTable logs={module.logs} />
+            <ModuleLogTable logs={module.logs} tableId={`${view}-recent`} />
           </SalesOrderSection>
         ) : null}
 
@@ -1127,7 +1419,7 @@ export function GenericConfigPage({ view }: { view: ViewKey }) {
         </div>
 
         <SalesOrderSection title="日志记录">
-          <ModuleLogTable logs={module.logs ?? []} />
+          <ModuleLogTable logs={module.logs ?? []} tableId={`${view}-logs`} />
         </SalesOrderSection>
       </div>
     );
@@ -1155,7 +1447,7 @@ export function GenericConfigPage({ view }: { view: ViewKey }) {
       </div>
       {module.logs ? (
         <SalesOrderSection title="最近操作">
-          <ModuleLogTable logs={module.logs} />
+          <ModuleLogTable logs={module.logs} tableId={`${view}-recent`} />
         </SalesOrderSection>
       ) : null}
     </div>
@@ -1175,25 +1467,34 @@ function ModuleFormGrid({
   fields,
   form,
   onFieldChange,
+  errors,
+  mode,
 }: {
   fields: ModuleField[];
   form: Record<string, any>;
   onFieldChange: (key: string, value: string) => void;
+  errors?: Record<string, string>;
+  mode: "create" | "edit";
 }) {
+  const visibleFields = fields.filter((field) => isFieldVisible(field, form, mode));
+
   return (
     <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
-      {fields.map((field) => (
+      {visibleFields.map((field) => (
         <div key={field.key} className={cn(field.span === 2 && "xl:col-span-2", field.span === 4 && "xl:col-span-4")}>
-          <FormField label={field.label} required={field.required}>
-            {renderField(field, form[field.key], (value) => onFieldChange(field.key, value))}
+          <FormField label={field.label} required={isFieldRequired(field, form, mode)}>
+            {renderField(field, form[field.key], (value) => onFieldChange(field.key, value), form, mode)}
           </FormField>
+          {errors?.[field.key] ? <div className="mt-1 text-xs text-danger">{errors[field.key]}</div> : null}
         </div>
       ))}
     </div>
   );
 }
 
-function renderField(field: ModuleField, value: any, onChange: (value: string) => void) {
+function renderField(field: ModuleField, value: any, onChange: (value: string) => void, form: Record<string, any>, mode: "create" | "edit") {
+  const readOnly = isFieldReadOnly(field, form, mode);
+
   if (field.type === "select") {
     return <Select value={String(value ?? "")} onChange={onChange} options={field.options ?? []} />;
   }
@@ -1201,9 +1502,9 @@ function renderField(field: ModuleField, value: any, onChange: (value: string) =
     return <DateField value={String(value ?? "")} onChange={onChange} />;
   }
   if (field.type === "textarea") {
-    return <TextArea value={String(value ?? "")} onChange={onChange} />;
+    return <TextArea value={String(value ?? "")} onChange={onChange} maxLength={field.maxLength} readOnly={readOnly} placeholder={field.placeholder} />;
   }
-  return <Input value={String(value ?? "")} onChange={onChange} />;
+  return <Input value={String(value ?? "")} onChange={onChange} maxLength={field.maxLength} readOnly={readOnly} placeholder={field.placeholder} />;
 }
 
 function renderColumnValue(record: CrudRecord, column: ModuleColumn) {
@@ -1211,11 +1512,11 @@ function renderColumnValue(record: CrudRecord, column: ModuleColumn) {
   return renderGenericValue(value, column.kind, record[column.toneKey ?? "statusTone"] as Tone | undefined);
 }
 
-function renderHeaderValue(record: CrudRecord, field: { key: string; kind?: "text" | "status"; toneKey?: string }) {
+function renderHeaderValue(record: CrudRecord, field: { key: string; kind?: "text" | "status" | "money"; toneKey?: string }) {
   return renderGenericValue(record[field.key], field.kind, record[field.toneKey ?? "statusTone"] as Tone | undefined);
 }
 
-function renderSectionValue(record: CrudRecord, item: { key: string; kind?: "text" | "status"; toneKey?: string }) {
+function renderSectionValue(record: CrudRecord, item: { key: string; kind?: "text" | "status" | "money"; toneKey?: string }) {
   return renderGenericValue(record[item.key], item.kind, record[item.toneKey ?? "statusTone"] as Tone | undefined);
 }
 
@@ -1223,32 +1524,116 @@ function renderGenericValue(value: unknown, kind?: "text" | "status" | "money", 
   if (kind === "status") {
     return <StatusPill tone={tone ?? "gray"}>{String(value ?? "-")}</StatusPill>;
   }
-  return String(value ?? "-");
+  if (kind === "money") {
+    const textValue = String(value ?? "").trim();
+    if (!textValue) {
+      return "-";
+    }
+    const normalized = Number(textValue.replace(/[^\d.-]/g, ""));
+    return Number.isFinite(normalized)
+      ? `¥${normalized.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      : "-";
+  }
+  const text = String(value ?? "").trim();
+  return text || "-";
 }
 
-function ModuleLogTable({ logs }: { logs: any[] }) {
+function isFieldVisible(field: ModuleField, form: Record<string, any>, mode: "create" | "edit") {
+  return field.visibleWhen ? field.visibleWhen({ form, mode }) : true;
+}
+
+function isFieldRequired(field: ModuleField, form: Record<string, any>, mode: "create" | "edit") {
+  return field.requiredWhen ? field.requiredWhen({ form, mode }) : Boolean(field.required);
+}
+
+function isFieldReadOnly(field: ModuleField, form: Record<string, any>, mode: "create" | "edit") {
+  if (field.readOnly) return true;
+  if (field.readOnlyWhen?.({ form, mode })) return true;
+  return Boolean(field.readOnlyInEdit && mode === "edit");
+}
+
+function EntityStatusDialog({
+  singular,
+  name,
+  action,
+  stopReason,
+  stopReasonError,
+  onStopReasonChange,
+  onCancel,
+  onConfirm,
+}: {
+  singular: string;
+  name: string;
+  action: "启用" | "停用";
+  stopReason: string;
+  stopReasonError: string;
+  onStopReasonChange: (value: string) => void;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="w-[420px] rounded-xl border border-line-1 bg-white p-6 shadow-xl">
+        <div className="mb-4 text-[15px] font-semibold text-text-1">
+          确认{action}：{name}
+        </div>
+        {action === "停用" ? (
+          <div className="mb-4 space-y-1">
+            <div className="text-[13px] text-text-2">停用原因 <span className="text-red-500">*</span></div>
+            <TextArea
+              value={stopReason}
+              onChange={onStopReasonChange}
+              maxLength={100}
+              placeholder="请填写停用原因"
+            />
+            {stopReasonError ? <div className="text-[12px] text-red-500">{stopReasonError}</div> : null}
+          </div>
+        ) : (
+          <div className="mb-4 text-[13px] text-text-2">启用后该{singular}可重新在新单中选择。</div>
+        )}
+        <div className="flex justify-end gap-2">
+          <Button onClick={onCancel}>取消</Button>
+          <Button tone="primary" onClick={onConfirm}>确认{action}</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ModuleLogTable({ logs, tableId = "shared-logs" }: { logs: any[]; tableId?: string }) {
+  const logColumns = [
+    { key: "time", width: 180, minWidth: 160 },
+    { key: "user", width: 120, minWidth: 100 },
+    { key: "action", width: 120, minWidth: 100 },
+    { key: "detail", width: 360, minWidth: 220 },
+  ];
+  const { containerRef, totalWidth, getColumnStyle, startResize } = useResizableColumns(`${tableId}:logs`, logColumns);
   return (
     <div className="overflow-hidden rounded-xl border border-line-1 bg-white shadow-card">
-      <table className="min-w-full border-collapse text-sm">
+      <div ref={containerRef} className="overflow-x-auto">
+      <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, 720) }}>
         <thead className="bg-fill-2 text-left text-text-2">
           <tr className="h-10">
-            <th className="border-b border-line-1 px-4">时间</th>
-            <th className="border-b border-line-1 px-4">操作人</th>
-            <th className="border-b border-line-1 px-4">动作</th>
-            <th className="border-b border-line-1 px-4">说明</th>
+            <ResizableHeaderCell width={getColumnStyle("time").width} minWidth={getColumnStyle("time").minWidth} onResizeStart={(clientX) => startResize("time", clientX)}>时间</ResizableHeaderCell>
+            <ResizableHeaderCell width={getColumnStyle("user").width} minWidth={getColumnStyle("user").minWidth} onResizeStart={(clientX) => startResize("user", clientX)}>操作人</ResizableHeaderCell>
+            <ResizableHeaderCell width={getColumnStyle("action").width} minWidth={getColumnStyle("action").minWidth} onResizeStart={(clientX) => startResize("action", clientX)}>动作</ResizableHeaderCell>
+            <ResizableHeaderCell width={getColumnStyle("detail").width} minWidth={getColumnStyle("detail").minWidth} className="border-r-0" onResizeStart={(clientX) => startResize("detail", clientX)}>说明</ResizableHeaderCell>
           </tr>
         </thead>
         <tbody>
           {logs.map((log, index) => (
             <tr key={`${log.time}-${index}`} className="border-b border-line-1">
-              <td className="px-4 py-3 text-text-2">{log.time}</td>
-              <td className="px-4 py-3">{log.user}</td>
-              <td className="px-4 py-3 font-medium text-text-1">{log.action}</td>
-              <td className="px-4 py-3 text-text-2">{log.detail}</td>
+              <td className="border-r border-line-1 px-4 py-3 text-text-2 whitespace-nowrap" style={getColumnStyle("time")}>{log.time}</td>
+              <td className="border-r border-line-1 px-4 py-3 whitespace-nowrap" style={getColumnStyle("user")}>{log.user}</td>
+              <td className="border-r border-line-1 px-4 py-3 font-medium text-text-1 whitespace-nowrap" style={getColumnStyle("action")}>{log.action}</td>
+              <td className="px-4 py-3 text-text-2 whitespace-nowrap" style={getColumnStyle("detail")} title={String(log.detail ?? "")}>
+                <div className="overflow-hidden text-ellipsis">{log.detail}</div>
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

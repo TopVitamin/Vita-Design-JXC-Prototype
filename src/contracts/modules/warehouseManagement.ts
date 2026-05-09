@@ -1,0 +1,137 @@
+import type { CrudModuleDefinition, CrudRecord } from "../types";
+import { buildEntityModule, buildLogs, entityStatusOptions, stripEntityRelations } from "./shared";
+
+const warehouseExtraRecords: CrudRecord[] = [
+  { id: "warehouse-003", code: "WH-0003", name: "华南后仓", type: "后仓", manager: "钱宇", phone: "13900139003", status: "启用", statusTone: "green", updatedAt: "2025/03/31 10:18", address: "深圳市龙岗区物流大道18号", remark: "南区主发货仓。", stopReason: "", createdBy: "管理员", createdAt: "2025/03/01 09:20", updatedBy: "钱宇", logs: buildLogs("仓库") },
+  { id: "warehouse-004", code: "WH-0004", name: "苏州后仓", type: "后仓", manager: "周曼", phone: "13900139004", status: "启用", statusTone: "green", updatedAt: "2025/03/30 14:40", address: "苏州市工业园区星湖街688号", remark: "项目交付仓。", stopReason: "", createdBy: "管理员", createdAt: "2025/03/03 10:10", updatedBy: "周曼", logs: buildLogs("仓库") },
+  { id: "warehouse-005", code: "WH-0005", name: "广州门店仓", type: "门店仓", manager: "李菲", phone: "13900139005", status: "启用", statusTone: "green", updatedAt: "2025/03/29 11:06", address: "广州市天河区体育西路66号", remark: "门店自提仓。", stopReason: "", createdBy: "管理员", createdAt: "2025/03/05 14:30", updatedBy: "李菲", logs: buildLogs("仓库") },
+  { id: "warehouse-006", code: "WH-0006", name: "武汉后仓", type: "后仓", manager: "王晨", phone: "13900139006", status: "启用", statusTone: "green", updatedAt: "2025/03/28 16:12", address: "武汉市东西湖区临空港大道18号", remark: "中部中转仓。", stopReason: "", createdBy: "管理员", createdAt: "2025/03/08 11:40", updatedBy: "王晨", logs: buildLogs("仓库") },
+  { id: "warehouse-007", code: "WH-0007", name: "成都后仓", type: "后仓", manager: "沈岩", phone: "13900139007", status: "启用", statusTone: "green", updatedAt: "2025/03/27 15:05", address: "成都市双流区西航港大道8号", remark: "西南区域补货仓。", stopReason: "", createdBy: "管理员", createdAt: "2025/03/10 09:15", updatedBy: "沈岩", logs: buildLogs("仓库") },
+  { id: "warehouse-008", code: "WH-0008", name: "天津门店仓", type: "门店仓", manager: "白宁", phone: "13900139008", status: "停用", statusTone: "gray", updatedAt: "2025/03/26 09:35", address: "天津市南开区长江道88号", remark: "历史门店仓。", stopReason: "门店关闭后停用。", createdBy: "管理员", createdAt: "2025/03/12 16:20", updatedBy: "白宁", logs: buildLogs("仓库") },
+  { id: "warehouse-009", code: "WH-0009", name: "青岛后仓", type: "后仓", manager: "陈扬", phone: "13900139009", status: "启用", statusTone: "green", updatedAt: "2025/03/25 13:42", address: "青岛市即墨区蓝谷大道99号", remark: "北方沿海补货仓。", stopReason: "", createdBy: "管理员", createdAt: "2025/03/14 10:00", updatedBy: "陈扬", logs: buildLogs("仓库") },
+  { id: "warehouse-010", code: "WH-0010", name: "南京门店仓", type: "门店仓", manager: "黄舟", phone: "13900139010", status: "启用", statusTone: "green", updatedAt: "2025/03/24 10:16", address: "南京市江宁区秣周东路188号", remark: "售后维修仓。", stopReason: "", createdBy: "管理员", createdAt: "2025/03/15 15:50", updatedBy: "黄舟", logs: buildLogs("仓库") },
+];
+
+export const warehouseManagementModuleDefinition: CrudModuleDefinition = buildEntityModule({
+  view: "warehouse-management",
+  title: "仓库管理",
+  singular: "仓库",
+  listDescription: "维护仓库档案、类型和责任信息。",
+  filters: [
+    { key: "keyword", label: "综合搜索", type: "search", placeholder: "仓库编码 / 名称 / 负责人" },
+    { key: "type", label: "仓库类型", type: "select", options: ["全部类型", "后仓", "门店仓"] },
+    { key: "status", label: "状态", type: "select", options: entityStatusOptions },
+  ],
+  columns: [
+    { key: "code", label: "仓库编码" },
+    { key: "name", label: "仓库名称" },
+    { key: "type", label: "仓库类型" },
+    { key: "manager", label: "负责人" },
+    { key: "phone", label: "联系电话" },
+    { key: "status", label: "状态", kind: "status", toneKey: "statusTone" },
+  ],
+  records: stripEntityRelations([
+    {
+      id: "warehouse-001",
+      code: "WH-0001",
+      name: "华北后仓",
+      type: "后仓",
+      manager: "王晨",
+      phone: "13900139001",
+      status: "启用",
+      statusTone: "green",
+      updatedAt: "2025/04/03 08:10",
+      address: "北京市顺义区物流园88号",
+      remark: "主发货仓，承接大部分订单履约。",
+      stopReason: "",
+      createdBy: "管理员",
+      createdAt: "2025/03/01 08:30",
+      updatedBy: "王晨",
+      logs: buildLogs("仓库"),
+    },
+    {
+      id: "warehouse-002",
+      code: "WH-0002",
+      name: "杭州门店仓",
+      type: "门店仓",
+      manager: "李菲",
+      phone: "13900139002",
+      status: "启用",
+      statusTone: "green",
+      updatedAt: "2025/04/01 14:20",
+      address: "杭州市余杭区仓前街道未来城1号",
+      remark: "门店自提与现场成交仓。",
+      stopReason: "",
+      createdBy: "管理员",
+      createdAt: "2025/03/02 09:10",
+      updatedBy: "李菲",
+      logs: buildLogs("仓库"),
+    },
+    ...warehouseExtraRecords,
+  ]),
+  formSections: [
+    {
+      title: "仓库资料",
+      fields: [
+        {
+          key: "code",
+          label: "仓库编码",
+          type: "input",
+          required: true,
+          maxLength: 20,
+          pattern: /^[A-Za-z0-9-]+$/,
+          patternMessage: "仓库编码仅允许字母、数字、连字符",
+          readOnlyInEdit: true,
+          inputTransform: (value) => value.replace(/[^A-Za-z0-9-]/g, ""),
+        },
+        { key: "name", label: "仓库名称", type: "input", required: true, maxLength: 50 },
+        { key: "type", label: "仓库类型", type: "select", options: ["后仓", "门店仓"], required: true, readOnlyInEdit: true },
+        { key: "manager", label: "负责人", type: "input", required: true, maxLength: 20 },
+        {
+          key: "phone",
+          label: "联系电话",
+          type: "input",
+          maxLength: 20,
+          pattern: /^(1\d{10}|0\d{2,3}-?\d{7,8})$/,
+          patternMessage: "联系电话格式不正确",
+        },
+        { key: "address", label: "仓库地址", type: "textarea", required: true, span: 2, maxLength: 100 },
+        { key: "remark", label: "仓库备注", type: "textarea", span: 2, maxLength: 200 },
+      ],
+    },
+    // 注意：启停用状态和停用原因不在主表单中维护。
+    // 启用/停用操作通过列表页行操作按钮触发确认弹窗完成，弹窗内含停用原因输入框（停用时必填）。
+  ],
+  headerFields: [
+    { label: "仓库编码", key: "code" },
+    { label: "仓库名称", key: "name" },
+    { label: "仓库类型", key: "type" },
+    { label: "状态", key: "status", kind: "status", toneKey: "statusTone" },
+  ],
+  detailSections: [
+    {
+      title: "仓库资料",
+      items: [
+        { label: "仓库编码", key: "code" },
+        { label: "仓库名称", key: "name" },
+        { label: "仓库类型", key: "type" },
+        { label: "负责人", key: "manager" },
+        { label: "联系电话", key: "phone" },
+        { label: "仓库地址", key: "address" },
+        { label: "仓库备注", key: "remark" },
+        { label: "状态", key: "status", kind: "status", toneKey: "statusTone" },
+      ],
+    },
+    {
+      title: "系统信息",
+      items: [
+        { label: "创建人", key: "createdBy" },
+        { label: "创建时间", key: "createdAt" },
+        { label: "最后修改人", key: "updatedBy" },
+        { label: "最后修改时间", key: "updatedAt" },
+      ],
+    },
+  ],
+  noteKeys: { external: "remark", internal: "remark" },
+  tags: ["后仓", "门店仓", "主数据底账"],
+});

@@ -1,6 +1,266 @@
-import { useState, useRef, useEffect, useCallback, createContext, useContext, type ReactNode } from "react";
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ChevronsUpDown, Search, X, Clock, Info, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo, createContext, useContext, type CSSProperties, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ChevronsUpDown, Search, X, Clock, Info, CheckCircle, AlertTriangle, XCircle, ListFilter } from "lucide-react";
 import { cn } from "../utils/cn";
+
+/** 日期 / Select / 批量搜索等 Portal 浮层 z-index，需高于卡片 overflow、表头 sticky */
+const FLOATING_PANEL_Z = 320;
+
+const TABLE_WIDTH_STORAGE_PREFIX = "jxc-table-widths:";
+
+type SelectUsage = "form" | "filter";
+
+const SelectUsageContext = createContext<SelectUsage>("form");
+
+function isFilterAllValue(value: string) {
+  return value.trim().startsWith("全部");
+}
+
+function resolveSelectUsage({
+  usage,
+  contextUsage,
+  placeholder,
+  options,
+}: {
+  usage?: SelectUsage;
+  contextUsage: SelectUsage;
+  placeholder: string;
+  options: string[];
+}) {
+  if (usage) return usage;
+  if (contextUsage === "filter") return "filter";
+  if (isFilterAllValue(placeholder)) return "filter";
+  if (options.some((option) => isFilterAllValue(option))) return "filter";
+  return "form";
+}
+
+export type ResizableColumnConfig = {
+  key: string;
+  width?: number;
+  minWidth?: number;
+  maxWidth?: number;
+  resizable?: boolean;
+};
+
+function canUseStorage() {
+  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
+}
+
+function readStoredWidths(tableId: string) {
+  if (!canUseStorage()) return {} as Record<string, number>;
+  try {
+    const raw = window.localStorage.getItem(`${TABLE_WIDTH_STORAGE_PREFIX}${tableId}`);
+    return raw ? (JSON.parse(raw) as Record<string, number>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeStoredWidths(tableId: string, widths: Record<string, number>) {
+  if (!canUseStorage()) return;
+  window.localStorage.setItem(`${TABLE_WIDTH_STORAGE_PREFIX}${tableId}`, JSON.stringify(widths));
+}
+
+function resolveDefaultWidth(column: ResizableColumnConfig) {
+  return column.width ?? column.minWidth ?? 140;
+}
+
+function clampColumnWidth(width: number, column: ResizableColumnConfig) {
+  const minWidth = column.minWidth ?? 100;
+  const maxWidth = column.maxWidth ?? 520;
+  return Math.min(Math.max(width, minWidth), maxWidth);
+}
+
+export function useResizableColumns(tableId: string, columns: ResizableColumnConfig[]) {
+  const columnsRef = useRef(columns);
+  columnsRef.current = columns;
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const columnSignature = JSON.stringify(columns.map((column) => ({
+    key: column.key,
+    width: column.width,
+    minWidth: column.minWidth,
+    maxWidth: column.maxWidth,
+    resizable: column.resizable,
+  })));
+  const [containerWidth, setContainerWidth] = useState(0);
+
+  const [widths, setWidths] = useState<Record<string, number>>(() => {
+    const stored = readStoredWidths(tableId);
+    return columns.reduce<Record<string, number>>((acc, column) => {
+      acc[column.key] = clampColumnWidth(stored[column.key] ?? resolveDefaultWidth(column), column);
+      return acc;
+    }, {});
+  });
+
+  useEffect(() => {
+    const stored = readStoredWidths(tableId);
+    setWidths(
+      columns.reduce<Record<string, number>>((acc, column) => {
+        acc[column.key] = clampColumnWidth(stored[column.key] ?? widths[column.key] ?? resolveDefaultWidth(column), column);
+        return acc;
+      }, {}),
+    );
+  }, [tableId, columnSignature]);
+
+  useEffect(() => {
+    writeStoredWidths(tableId, widths);
+  }, [tableId, widths]);
+
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element || typeof ResizeObserver === "undefined") return;
+
+    const updateWidth = () => setContainerWidth(element.clientWidth);
+    updateWidth();
+
+    const observer = new ResizeObserver(() => updateWidth());
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [tableId, columnSignature]);
+
+  const startResize = useCallback((columnKey: string, startClientX: number) => {
+    const targetColumn = columnsRef.current.find((column) => column.key === columnKey);
+    if (!targetColumn || targetColumn.resizable === false) return;
+
+    const startWidth = widths[columnKey] ?? resolveDefaultWidth(targetColumn);
+
+    const handlePointerMove = (event: MouseEvent) => {
+      const delta = event.clientX - startClientX;
+      setWidths((current) => ({
+        ...current,
+        [columnKey]: clampColumnWidth(startWidth + delta, targetColumn),
+      }));
+    };
+
+    const handlePointerUp = () => {
+      window.removeEventListener("mousemove", handlePointerMove);
+      window.removeEventListener("mouseup", handlePointerUp);
+    };
+
+    window.addEventListener("mousemove", handlePointerMove);
+    window.addEventListener("mouseup", handlePointerUp);
+  }, [widths]);
+
+  const resetWidths = useCallback(() => {
+    const nextWidths = columns.reduce<Record<string, number>>((acc, column) => {
+      acc[column.key] = resolveDefaultWidth(column);
+      return acc;
+    }, {});
+    setWidths(nextWidths);
+    writeStoredWidths(tableId, nextWidths);
+  }, [columnSignature, tableId]);
+
+  const getColumnWidth = useCallback((columnKey: string, fallbackWidth?: number) => {
+    const targetColumn = columnsRef.current.find((column) => column.key === columnKey);
+    return widths[columnKey] ?? fallbackWidth ?? (targetColumn ? resolveDefaultWidth(targetColumn) : 140);
+  }, [widths]);
+
+  const getColumnStyle = useCallback((columnKey: string) => {
+    const targetColumn = columnsRef.current.find((column) => column.key === columnKey);
+    const width = getColumnWidth(columnKey, targetColumn?.width);
+    return {
+      width,
+      minWidth: targetColumn?.minWidth ?? width,
+      maxWidth: targetColumn?.maxWidth,
+    } as const;
+  }, [getColumnWidth]);
+
+  const effectiveWidths = useMemo(() => {
+    const baseWidths = columns.reduce<Record<string, number>>((acc, column) => {
+      acc[column.key] = getColumnWidth(column.key, column.width);
+      return acc;
+    }, {});
+
+    const totalBaseWidth = Object.values(baseWidths).reduce((sum, width) => sum + width, 0);
+    const stretchableColumns = columns.filter((column) => column.resizable !== false);
+
+    if (!containerWidth || totalBaseWidth >= containerWidth || stretchableColumns.length === 0) {
+      return baseWidths;
+    }
+
+    const extraWidth = containerWidth - totalBaseWidth;
+    const extraPerColumn = extraWidth / stretchableColumns.length;
+
+    return columns.reduce<Record<string, number>>((acc, column) => {
+      const nextWidth = column.resizable === false ? baseWidths[column.key] : baseWidths[column.key] + extraPerColumn;
+      acc[column.key] = clampColumnWidth(nextWidth, column);
+      return acc;
+    }, {});
+  }, [columns, containerWidth, getColumnWidth]);
+
+  const totalWidth = Math.max(
+    containerWidth,
+    columns.reduce((sum, column) => sum + (effectiveWidths[column.key] ?? getColumnWidth(column.key, column.width)), 0),
+  );
+
+  return {
+    containerRef,
+    widths,
+    effectiveWidths,
+    totalWidth,
+    startResize,
+    resetWidths,
+    getColumnWidth,
+    getColumnStyle: (columnKey: string) => {
+      const targetColumn = columnsRef.current.find((column) => column.key === columnKey);
+      const width = effectiveWidths[columnKey] ?? getColumnWidth(columnKey, targetColumn?.width);
+      return {
+        width,
+        minWidth: targetColumn?.minWidth ?? width,
+        maxWidth: targetColumn?.maxWidth,
+      } as const;
+    },
+  };
+}
+
+export function ResizableHeaderCell({
+  children,
+  width,
+  minWidth,
+  maxWidth,
+  className,
+  resizable = true,
+  onResizeStart,
+  style,
+}: {
+  children: ReactNode;
+  width: number;
+  minWidth?: number;
+  maxWidth?: number;
+  className?: string;
+  resizable?: boolean;
+  onResizeStart?: (clientX: number) => void;
+  style?: CSSProperties;
+}) {
+  const [armed, setArmed] = useState(false);
+  const edgeThreshold = 8;
+
+  return (
+    <th
+      className={cn("relative border-b border-r border-line-1 px-4 whitespace-nowrap", armed && resizable && "cursor-col-resize", className)}
+      style={{ width, minWidth: minWidth ?? width, maxWidth, ...style }}
+      onMouseMove={(event) => {
+        if (!resizable) return;
+        const rect = event.currentTarget.getBoundingClientRect();
+        setArmed(rect.right - event.clientX <= edgeThreshold);
+      }}
+      onMouseLeave={() => setArmed(false)}
+      onMouseDown={(event) => {
+        if (!resizable || !armed) return;
+        event.preventDefault();
+        event.stopPropagation();
+        onResizeStart?.(event.clientX);
+      }}
+    >
+      <div className={cn("relative flex items-center", resizable && armed && "cursor-col-resize")}>
+        <div className="min-w-0 flex-1 overflow-hidden">{children}</div>
+        {resizable && armed ? (
+          <span className="pointer-events-none absolute right-[-1px] top-1/2 z-10 h-[60%] w-px -translate-y-1/2 bg-brand-6/70" />
+        ) : null}
+      </div>
+    </th>
+  );
+}
 
 export function PageTitle({
   title,
@@ -112,22 +372,181 @@ export function Input({
   onChange,
   placeholder,
   className,
+  maxLength,
+  readOnly = false,
 }: {
   value: string;
   onChange?: (value: string) => void;
   placeholder?: string;
   className?: string;
+  maxLength?: number;
+  readOnly?: boolean;
 }) {
   return (
     <input
       value={value}
       onChange={(event) => onChange?.(event.target.value)}
       placeholder={placeholder}
+      maxLength={maxLength}
+      readOnly={readOnly}
       className={cn(
         "h-8 w-full rounded-md border border-line-2 bg-fill-1 px-3 text-[13px] text-text-1 outline-none transition focus:border-brand-6 focus:bg-white placeholder:text-text-3",
+        readOnly && "cursor-not-allowed bg-fill-2 text-text-2 focus:border-line-2 focus:bg-fill-2",
         className,
       )}
     />
+  );
+}
+
+export function BatchSearchInput({
+  value,
+  onChange,
+  placeholder = "支持批量，精确匹配",
+  dialogTitle,
+  dialogPlaceholder = "可直接从Excel复制整列粘贴至此，最多1000条数据\n支持：换行、中文/英文逗号/分号、制表符（Tab）或空格",
+  maxItems = 1000,
+  className,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  dialogTitle?: string;
+  dialogPlaceholder?: string;
+  maxItems?: number;
+  className?: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const [popoverStyle, setPopoverStyle] = useState<CSSProperties>({});
+
+  useEffect(() => {
+    if (!isOpen) {
+      setDraft(value);
+    }
+  }, [value, isOpen]);
+
+  const updatePopoverPosition = useCallback(() => {
+    const el = triggerRef.current;
+    if (!el || !isOpen) return;
+    const rect = el.getBoundingClientRect();
+    const minW = Math.max(320, rect.width);
+    let left = rect.left;
+    if (typeof window !== "undefined") {
+      left = Math.min(left, window.innerWidth - minW - 8);
+      left = Math.max(8, left);
+    }
+    setPopoverStyle({
+      position: "fixed",
+      top: rect.bottom + 4,
+      left,
+      minWidth: minW,
+      zIndex: FLOATING_PANEL_Z,
+    });
+  }, [isOpen]);
+
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      setPopoverStyle({});
+      return;
+    }
+    updatePopoverPosition();
+    window.addEventListener("scroll", updatePopoverPosition, true);
+    window.addEventListener("resize", updatePopoverPosition);
+    return () => {
+      window.removeEventListener("scroll", updatePopoverPosition, true);
+      window.removeEventListener("resize", updatePopoverPosition);
+    };
+  }, [isOpen, updatePopoverPosition]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (triggerRef.current?.contains(t) || popoverRef.current?.contains(t)) return;
+      setIsOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen]);
+
+  const itemCount = useMemo(() => {
+    return draft
+      .split(/[\n,，;；\t ]+/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .length;
+  }, [draft]);
+
+  const panel = (
+    <div
+      ref={popoverRef}
+      style={popoverStyle}
+      className="max-h-[min(520px,calc(100vh-24px))] overflow-hidden rounded-xl border border-line-1 bg-white shadow-dropdown"
+    >
+          <div className="border-b border-line-1 px-4 py-3 text-[14px] font-semibold text-text-1">
+            {dialogTitle || "批量精确匹配"}
+          </div>
+          <div className="p-3">
+            <textarea
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              placeholder={dialogPlaceholder}
+              className="min-h-[200px] w-full resize-none rounded-lg border border-line-2 bg-white px-3 py-2 text-[13px] leading-7 text-text-1 outline-none transition focus:border-brand-6"
+            />
+          </div>
+          <div className="flex items-end justify-between border-t border-line-1 px-4 py-3">
+            <div>
+              <div className="text-xs text-text-2">有效项</div>
+              <div className="mt-0.5 text-lg font-semibold text-brand-6">{Math.min(itemCount, maxItems)}</div>
+            </div>
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                className="text-[14px] text-text-2 transition hover:text-text-1"
+                onClick={() => setDraft("")}
+              >
+                清空
+              </button>
+              <Button onClick={() => { setIsOpen(false); setDraft(value); }}>取消</Button>
+              <Button
+                tone="primary"
+                onClick={() => {
+                  const normalized = draft
+                    .split(/[\n,，;；\t ]+/)
+                    .map((item) => item.trim())
+                    .filter(Boolean)
+                    .slice(0, maxItems)
+                    .join("\n");
+                  onChange(normalized);
+                  setIsOpen(false);
+                }}
+              >
+                确认
+              </Button>
+            </div>
+          </div>
+    </div>
+  );
+
+  return (
+    <div className="relative">
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={cn(
+          "flex h-8 w-full items-center justify-between rounded-md border border-line-2 bg-fill-1 px-3 text-[13px] transition hover:border-brand-3 hover:bg-white",
+          className,
+        )}
+      >
+        <span className={value.trim() ? "truncate text-text-1" : "truncate text-text-3"}>{value.trim() ? `${itemCount} 项已录入` : placeholder}</span>
+        <ListFilter size={16} className="shrink-0 text-text-3" />
+      </button>
+
+      {typeof document !== "undefined" && isOpen ? createPortal(panel, document.body) : null}
+    </div>
   );
 }
 
@@ -145,6 +564,7 @@ interface SelectProps {
   className?: string;
   allowSearch?: boolean;
   allowCreate?: boolean;
+  usage?: SelectUsage;
 }
 
 export function Select({
@@ -155,16 +575,24 @@ export function Select({
   className,
   allowSearch = false,
   allowCreate = false,
+  usage,
 }: SelectProps) {
+  const contextUsage = useContext(SelectUsageContext);
+  const effectiveUsage = resolveSelectUsage({ usage, contextUsage, placeholder, options });
+  const filterAllValue = effectiveUsage === "filter" ? options.find((option) => isFilterAllValue(option)) ?? "" : "";
+  const normalizedValue = effectiveUsage === "filter" && isFilterAllValue(value) ? "" : value;
+  const emptyLabel = effectiveUsage === "filter" ? "全部" : placeholder;
   const [isOpen, setIsOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [highlightedIndex, setHighlightedIndex] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const [popoverStyle, setPopoverStyle] = useState<CSSProperties>({});
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const selectOptions: SelectOption[] = options.map((opt) =>
-    typeof opt === "string" ? { value: opt, label: opt } : opt
-  );
+  const selectOptions: SelectOption[] = options
+    .filter((opt) => !(effectiveUsage === "filter" && isFilterAllValue(opt)))
+    .map((opt) => (typeof opt === "string" ? { value: opt, label: opt } : opt));
 
   const filteredOptions = selectOptions.filter((opt) =>
     opt.label.toLowerCase().includes(searchValue.toLowerCase())
@@ -173,9 +601,12 @@ export function Select({
   const showCreateOption =
     allowCreate && searchValue && !selectOptions.some((opt) => opt.label === searchValue);
 
-  const displayedOptions = showCreateOption
-    ? [...filteredOptions, { value: searchValue, label: `创建 "${searchValue}"` }]
-    : filteredOptions;
+  const displayedOptions = [
+    ...(effectiveUsage === "filter" ? [{ value: filterAllValue, label: "全部" }] : []),
+    ...(showCreateOption
+      ? [...filteredOptions, { value: searchValue, label: `创建 "${searchValue}"` }]
+      : filteredOptions),
+  ];
 
   useEffect(() => {
     if (isOpen && allowSearch && inputRef.current) {
@@ -183,16 +614,50 @@ export function Select({
     }
   }, [isOpen, allowSearch]);
 
+  const updatePopoverPosition = useCallback(() => {
+    const el = triggerRef.current;
+    if (!el || !isOpen) return;
+    const rect = el.getBoundingClientRect();
+    const minW = Math.max(200, rect.width);
+    let left = rect.left;
+    if (typeof window !== "undefined") {
+      left = Math.min(left, window.innerWidth - minW - 8);
+      left = Math.max(8, left);
+    }
+    setPopoverStyle({
+      position: "fixed",
+      top: rect.bottom + 4,
+      left,
+      minWidth: minW,
+      zIndex: FLOATING_PANEL_Z,
+    });
+  }, [isOpen]);
+
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      setPopoverStyle({});
+      return;
+    }
+    updatePopoverPosition();
+    window.addEventListener("scroll", updatePopoverPosition, true);
+    window.addEventListener("resize", updatePopoverPosition);
+    return () => {
+      window.removeEventListener("scroll", updatePopoverPosition, true);
+      window.removeEventListener("resize", updatePopoverPosition);
+    };
+  }, [isOpen, updatePopoverPosition]);
+
   useEffect(() => {
+    if (!isOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-        setSearchValue("");
-      }
+      const t = e.target as Node;
+      if (triggerRef.current?.contains(t) || popoverRef.current?.contains(t)) return;
+      setIsOpen(false);
+      setSearchValue("");
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [isOpen]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!isOpen) {
@@ -226,11 +691,67 @@ export function Select({
     }
   };
 
-  const selectedOption = selectOptions.find((opt) => opt.value === value);
+  const selectedOption = selectOptions.find((opt) => opt.value === normalizedValue);
+
+  const panel = (
+    <div
+      ref={popoverRef}
+      style={popoverStyle}
+      className="flex max-h-[min(320px,calc(100vh-24px))] flex-col overflow-hidden rounded-md border border-line-2 bg-white py-1 shadow-dropdown"
+    >
+      {allowSearch && (
+        <div className="shrink-0 p-2">
+          <div className="relative">
+            <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-text-3" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={searchValue}
+              onChange={(e) => {
+                setSearchValue(e.target.value);
+                setHighlightedIndex(0);
+              }}
+              placeholder="搜索..."
+              className="h-7 w-full rounded border border-line-2 bg-fill-1 pl-7 pr-3 text-[13px] outline-none focus:border-brand-6"
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {displayedOptions.length === 0 ? (
+          <div className="px-3 py-2 text-[13px] text-text-3">无匹配结果</div>
+        ) : (
+          displayedOptions.map((option, index) => (
+            <div
+              key={option.value}
+              className={cn(
+                "cursor-pointer px-3 py-2 text-[13px]",
+                (
+                  option.value === normalizedValue ||
+                  (effectiveUsage === "filter" && normalizedValue === "" && option.value === filterAllValue)
+                ) ? "bg-brand-1 text-brand-6" : "text-text-1",
+                index === highlightedIndex && "bg-fill-2"
+              )}
+              onClick={() => {
+                onChange?.(option.value);
+                setIsOpen(false);
+                setSearchValue("");
+              }}
+              onMouseEnter={() => setHighlightedIndex(index)}
+            >
+              {option.label}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
 
   return (
-    <div ref={containerRef} className={cn("relative", className)} onKeyDown={handleKeyDown}>
+    <div className={cn("relative", className)} onKeyDown={handleKeyDown}>
       <div
+        ref={triggerRef}
         className={cn(
           "flex h-8 w-full cursor-pointer items-center justify-between rounded-md border border-line-2 bg-fill-1 px-3 text-[13px] transition focus-within:border-brand-6 focus-within:bg-white",
           isOpen && "border-brand-6"
@@ -239,7 +760,7 @@ export function Select({
         tabIndex={0}
       >
         <span className={selectedOption ? "text-text-1" : "text-text-3"}>
-          {selectedOption?.label || placeholder}
+          {selectedOption?.label || emptyLabel}
         </span>
         <ChevronDown
           size={16}
@@ -247,53 +768,7 @@ export function Select({
         />
       </div>
 
-      {isOpen && (
-        <div className="absolute left-0 top-full z-50 mt-1 w-full min-w-[200px] overflow-hidden rounded-md border border-line-2 bg-white py-1 shadow-dropdown">
-          {allowSearch && (
-            <div className="p-2">
-              <div className="relative">
-                <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-text-3" />
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={searchValue}
-                  onChange={(e) => {
-                    setSearchValue(e.target.value);
-                    setHighlightedIndex(0);
-                  }}
-                  placeholder="搜索..."
-                  className="h-7 w-full rounded border border-line-2 bg-fill-1 pl-7 pr-3 text-[13px] outline-none focus:border-brand-6"
-                />
-              </div>
-            </div>
-          )}
-
-          <div className="max-h-[240px] overflow-y-auto">
-            {displayedOptions.length === 0 ? (
-              <div className="px-3 py-2 text-[13px] text-text-3">无匹配结果</div>
-            ) : (
-              displayedOptions.map((option, index) => (
-                <div
-                  key={option.value}
-                  className={cn(
-                    "cursor-pointer px-3 py-2 text-[13px]",
-                    option.value === value ? "bg-brand-1 text-brand-6" : "text-text-1",
-                    index === highlightedIndex && "bg-fill-2"
-                  )}
-                  onClick={() => {
-                    onChange?.(option.value);
-                    setIsOpen(false);
-                    setSearchValue("");
-                  }}
-                  onMouseEnter={() => setHighlightedIndex(index)}
-                >
-                  {option.label}
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      )}
+      {typeof document !== "undefined" && isOpen ? createPortal(panel, document.body) : null}
     </div>
   );
 }
@@ -308,14 +783,17 @@ interface DateFieldProps {
 
 export function DateField({ value, onChange, placeholder, className }: DateFieldProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const [popoverStyle, setPopoverStyle] = useState<CSSProperties>({});
 
   const parseValue = (val: string) => {
     if (!val) {
       const now = new Date();
       return { year: now.getFullYear(), month: now.getMonth() + 1, day: now.getDate() };
     }
-    const [year, month, day] = val.split("/").map(Number);
+    const parts = val.includes("/") ? val.split("/") : val.split("-");
+    const [year, month, day] = parts.map(Number);
     return { year: year || 2024, month: month || 1, day: day || 1 };
   };
 
@@ -323,15 +801,49 @@ export function DateField({ value, onChange, placeholder, className }: DateField
   const [viewYear, setViewYear] = useState(year);
   const [viewMonth, setViewMonth] = useState(month);
 
+  const updatePopoverPosition = useCallback(() => {
+    const el = triggerRef.current;
+    if (!el || !isOpen) return;
+    const rect = el.getBoundingClientRect();
+    const minW = Math.max(280, rect.width);
+    let left = rect.left;
+    if (typeof window !== "undefined") {
+      left = Math.min(left, window.innerWidth - minW - 8);
+      left = Math.max(8, left);
+    }
+    setPopoverStyle({
+      position: "fixed",
+      top: rect.bottom + 4,
+      left,
+      minWidth: minW,
+      zIndex: FLOATING_PANEL_Z,
+    });
+  }, [isOpen]);
+
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      setPopoverStyle({});
+      return;
+    }
+    updatePopoverPosition();
+    window.addEventListener("scroll", updatePopoverPosition, true);
+    window.addEventListener("resize", updatePopoverPosition);
+    return () => {
+      window.removeEventListener("scroll", updatePopoverPosition, true);
+      window.removeEventListener("resize", updatePopoverPosition);
+    };
+  }, [isOpen, updatePopoverPosition]);
+
   useEffect(() => {
+    if (!isOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
+      const t = e.target as Node;
+      if (triggerRef.current?.contains(t) || popoverRef.current?.contains(t)) return;
+      setIsOpen(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [isOpen]);
 
   const getDaysInMonth = (y: number, m: number) => new Date(y, m, 0).getDate();
   const firstDayOfMonth = new Date(viewYear, viewMonth - 1, 1).getDay();
@@ -345,22 +857,16 @@ export function DateField({ value, onChange, placeholder, className }: DateField
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
 
   const handleSelectDay = (d: number) => {
-    onChange?.(`${viewYear}/${String(viewMonth).padStart(2, "0")}/${String(d).padStart(2, "0")}`);
+    onChange?.(`${viewYear}-${String(viewMonth).padStart(2, "0")}-${String(d).padStart(2, "0")}`);
     setIsOpen(false);
   };
 
-  return (
-    <div ref={containerRef} className={cn("relative", className)}>
-      <div
-        className="flex h-8 w-full cursor-pointer items-center justify-between rounded-md border border-line-2 bg-fill-1 px-3 text-[13px] transition focus-within:border-brand-6 focus-within:bg-white"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <span className={value ? "text-text-1" : "text-text-3"}>{value || placeholder || "请选择日期"}</span>
-        <CalendarDays size={16} className="text-text-3" />
-      </div>
-
-      {isOpen && (
-        <div className="absolute left-0 top-full z-50 mt-1 min-w-[280px] overflow-hidden rounded-lg border border-line-2 bg-white shadow-dropdown">
+  const panel = (
+    <div
+      ref={popoverRef}
+      style={popoverStyle}
+      className="overflow-hidden rounded-lg border border-line-2 bg-white shadow-dropdown"
+    >
           {/* 年月导航 */}
           <div className="flex items-center justify-between border-b border-line-1 px-3 py-2">
             <button type="button" onClick={() => setViewMonth((m) => (m === 1 ? 12 : m - 1))} className="flex h-7 w-7 items-center justify-center rounded hover:bg-fill-2">
@@ -415,8 +921,21 @@ export function DateField({ value, onChange, placeholder, className }: DateField
             <button type="button" onClick={() => setIsOpen(false)} className="rounded px-3 py-1 text-[13px] hover:bg-fill-2">取消</button>
             <button type="button" onClick={() => setIsOpen(false)} className="rounded bg-brand-6 px-3 py-1 text-[13px] text-white hover:bg-brand-7">确定</button>
           </div>
-        </div>
-      )}
+    </div>
+  );
+
+  return (
+    <div className={cn("relative", className)}>
+      <div
+        ref={triggerRef}
+        className="flex h-8 w-full cursor-pointer items-center justify-between rounded-md border border-line-2 bg-fill-1 px-3 text-[13px] transition focus-within:border-brand-6 focus-within:bg-white"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span className={value ? "text-text-1" : "text-text-3"}>{value || placeholder || "请选择日期"}</span>
+        <CalendarDays size={16} className="text-text-3" />
+      </div>
+
+      {typeof document !== "undefined" && isOpen ? createPortal(panel, document.body) : null}
     </div>
   );
 }
@@ -432,14 +951,17 @@ interface DateRangeFieldProps {
 export function DateRangeField({ value, onChange, placeholder, className }: DateRangeFieldProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState<"start" | "end">("start");
-  const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const [popoverStyle, setPopoverStyle] = useState<CSSProperties>({});
 
   const parseValue = (val: string) => {
     if (!val) {
       const now = new Date();
       return { year: now.getFullYear(), month: now.getMonth() + 1, day: now.getDate() };
     }
-    const [year, month, day] = val.split("/").map(Number);
+    const parts = val.includes("/") ? val.split("/") : val.split("-");
+    const [year, month, day] = parts.map(Number);
     return { year: year || 2024, month: month || 1, day: day || 1 };
   };
 
@@ -448,15 +970,49 @@ export function DateRangeField({ value, onChange, placeholder, className }: Date
   const [viewYear, setViewYear] = useState(startParsed.year);
   const [viewMonth, setViewMonth] = useState(startParsed.month);
 
+  const updatePopoverPosition = useCallback(() => {
+    const el = triggerRef.current;
+    if (!el || !isOpen) return;
+    const rect = el.getBoundingClientRect();
+    const minW = Math.max(320, rect.width);
+    let left = rect.left;
+    if (typeof window !== "undefined") {
+      left = Math.min(left, window.innerWidth - minW - 8);
+      left = Math.max(8, left);
+    }
+    setPopoverStyle({
+      position: "fixed",
+      top: rect.bottom + 4,
+      left,
+      minWidth: minW,
+      zIndex: FLOATING_PANEL_Z,
+    });
+  }, [isOpen]);
+
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      setPopoverStyle({});
+      return;
+    }
+    updatePopoverPosition();
+    window.addEventListener("scroll", updatePopoverPosition, true);
+    window.addEventListener("resize", updatePopoverPosition);
+    return () => {
+      window.removeEventListener("scroll", updatePopoverPosition, true);
+      window.removeEventListener("resize", updatePopoverPosition);
+    };
+  }, [isOpen, updatePopoverPosition]);
+
   useEffect(() => {
+    if (!isOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
+      const t = e.target as Node;
+      if (triggerRef.current?.contains(t) || popoverRef.current?.contains(t)) return;
+      setIsOpen(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [isOpen]);
 
   const getDaysInMonth = (y: number, m: number) => new Date(y, m, 0).getDate();
   const firstDayOfMonth = new Date(viewYear, viewMonth - 1, 1).getDay();
@@ -470,7 +1026,7 @@ export function DateRangeField({ value, onChange, placeholder, className }: Date
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
 
   const handleSelectDay = (d: number) => {
-    const selected = `${viewYear}/${String(viewMonth).padStart(2, "0")}/${String(d).padStart(2, "0")}`;
+    const selected = `${viewYear}-${String(viewMonth).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
     if (mode === "start") {
       onChange?.({ start: selected, end: value?.end || "" });
       setMode("end");
@@ -492,20 +1048,12 @@ export function DateRangeField({ value, onChange, placeholder, className }: Date
     return "";
   };
 
-  return (
-    <div ref={containerRef} className={cn("relative", className)}>
-      <div
-        className="flex h-8 w-full cursor-pointer items-center justify-between rounded-md border border-line-2 bg-fill-1 px-3 text-[13px] transition focus-within:border-brand-6 focus-within:bg-white"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <span className={displayValue() ? "text-text-1" : "text-text-3"}>
-          {displayValue() || placeholder || "请选择日期范围"}
-        </span>
-        <CalendarDays size={16} className="text-text-3" />
-      </div>
-
-      {isOpen && (
-        <div className="absolute left-0 top-full z-50 mt-1 min-w-[320px] overflow-hidden rounded-lg border border-line-2 bg-white shadow-dropdown">
+  const panel = (
+    <div
+      ref={popoverRef}
+      style={popoverStyle}
+      className="overflow-hidden rounded-lg border border-line-2 bg-white shadow-dropdown"
+    >
           {/* 当前选择提示 */}
           <div className="border-b border-line-1 px-3 py-2 text-center text-[13px] text-text-3">
             {mode === "start" ? "请选择开始日期" : "请选择结束日期"}
@@ -589,8 +1137,23 @@ export function DateRangeField({ value, onChange, placeholder, className }: Date
               确定
             </button>
           </div>
-        </div>
-      )}
+    </div>
+  );
+
+  return (
+    <div className={cn("relative", className)}>
+      <div
+        ref={triggerRef}
+        className="flex h-8 w-full cursor-pointer items-center justify-between rounded-md border border-line-2 bg-fill-1 px-3 text-[13px] transition focus-within:border-brand-6 focus-within:bg-white"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span className={displayValue() ? "text-text-1" : "text-text-3"}>
+          {displayValue() || placeholder || "请选择日期范围"}
+        </span>
+        <CalendarDays size={16} className="text-text-3" />
+      </div>
+
+      {typeof document !== "undefined" && isOpen ? createPortal(panel, document.body) : null}
     </div>
   );
 }
@@ -760,7 +1323,7 @@ export function DateTimeField({ value, onChange, placeholder, className }: DateT
   const minutes = [0, 15, 30, 45];
 
   const handleSelectDay = (d: number) => {
-    const dateStr = `${viewYear}/${String(viewMonth).padStart(2, "0")}/${String(d).padStart(2, "0")}`;
+    const dateStr = `${viewYear}-${String(viewMonth).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
     const timeStr = `${String(selectedHour).padStart(2, "0")}:${String(selectedMinute).padStart(2, "0")}`;
     onChange?.(`${dateStr} ${timeStr}`);
     setShowTime(true);
@@ -923,18 +1486,40 @@ export function TextArea({
   value,
   onChange,
   placeholder,
+  className,
+  maxLength,
+  readOnly = false,
 }: {
   value: string;
   onChange?: (value: string) => void;
   placeholder?: string;
+  className?: string;
+  maxLength?: number;
+  readOnly?: boolean;
 }) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "32px";
+    el.style.height = `${Math.max(el.scrollHeight, 32)}px`;
+  }, [value]);
+
   return (
     <textarea
+      ref={textareaRef}
       value={value}
       onChange={(event) => onChange?.(event.target.value)}
       placeholder={placeholder}
-      rows={4}
-      className="min-h-[88px] w-full rounded-md border border-line-2 bg-fill-1 px-3 py-2.5 text-[13px] leading-6 text-text-1 outline-none transition focus:border-brand-6 focus:bg-white placeholder:text-text-3"
+      maxLength={maxLength}
+      readOnly={readOnly}
+      rows={1}
+      className={cn(
+        "min-h-8 w-full resize-none overflow-hidden rounded-md border border-line-2 bg-fill-1 px-3 py-1.5 text-[13px] leading-[22px] text-text-1 outline-none transition focus:border-brand-6 focus:bg-white placeholder:text-text-3",
+        readOnly && "cursor-not-allowed bg-fill-2 text-text-2 focus:border-line-2 focus:bg-fill-2",
+        className,
+      )}
     />
   );
 }
@@ -995,10 +1580,12 @@ export function FilterField({
   className?: string;
 }) {
   return (
-    <div className={cn("flex min-w-[160px] flex-col gap-2", className)}>
-      <div className="text-[13px] text-text-2">{label}</div>
-      {children}
-    </div>
+    <SelectUsageContext.Provider value="filter">
+      <div className={cn("flex min-w-[160px] flex-col gap-2", className)}>
+        <div className="text-[13px] text-text-2">{label}</div>
+        {children}
+      </div>
+    </SelectUsageContext.Provider>
   );
 }
 
@@ -1033,30 +1620,97 @@ export function TabBar<T extends string>({
   activeKey,
   onChange,
   className,
+  variant = "pill",
 }: {
-  items: Array<{ key: T; label: string }>;
+  items: Array<{ key: T; label: React.ReactNode }>;
   activeKey: T;
   onChange: (key: T) => void;
   className?: string;
+  /** pill：独立描边按钮；segmented：浅底分段控件；underline：Ant 式横线 Tab，底部分割线 + 选中项蓝色字与 2px 下划线 */
+  variant?: "pill" | "segmented" | "underline";
 }) {
+  if (variant === "segmented") {
+    return (
+      <div className={cn(className)}>
+        <div
+          role="tablist"
+          className="inline-flex max-w-full flex-wrap items-stretch gap-0.5 rounded-lg bg-fill-2 p-1 ring-1 ring-inset ring-black/[0.06]"
+        >
+          {items.map((item) => {
+            const isActive = activeKey === item.key;
+            return (
+              <button
+                key={item.key}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => onChange(item.key)}
+                className={cn(
+                  "min-h-8 shrink-0 rounded-md px-3 py-1.5 text-[13px] font-medium transition-all duration-150",
+                  isActive
+                    ? "bg-white text-text-1 shadow-sm ring-1 ring-black/[0.06]"
+                    : "text-text-2 hover:bg-white/70 hover:text-text-1",
+                )}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (variant === "underline") {
+    return (
+      <div
+        role="tablist"
+        className={cn("flex flex-wrap items-stretch gap-1 border-b border-line-1", className)}
+      >
+        {items.map((item) => {
+          const isActive = activeKey === item.key;
+          return (
+            <button
+              key={item.key}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => onChange(item.key)}
+              className={cn(
+                "relative shrink-0 px-4 pb-3 pt-2 text-[14px] transition-colors duration-150",
+                isActive
+                  ? "font-medium text-brand-6 after:pointer-events-none after:absolute after:bottom-0 after:left-1/2 after:h-[2px] after:w-8 after:-translate-x-1/2 after:rounded-sm after:bg-brand-6"
+                  : "font-normal text-text-2 hover:text-brand-6/90",
+              )}
+            >
+              {item.label}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
-    <div className={cn("mb-2 border-b border-line-2 px-1 pt-2", className)}>
-      <div className="flex flex-wrap items-center gap-5 px-1">
-        {items.map((item) => (
+    <div className={cn("mb-4 flex flex-wrap items-center gap-2", className)}>
+      {items.map((item) => {
+        const isActive = activeKey === item.key;
+        return (
           <button
             key={item.key}
             type="button"
             onClick={() => onChange(item.key)}
             className={cn(
-              "relative pb-3 text-[14px] font-medium transition",
-              activeKey === item.key ? "text-brand-6" : "text-text-2 hover:text-text-1",
+              "relative flex items-center justify-center rounded-lg px-4 py-1.5 text-[14px] font-medium transition-all duration-200 border",
+              isActive
+                ? "bg-brand-1 text-brand-7 border-brand-3 shadow-sm"
+                : "bg-white text-text-2 border-transparent hover:bg-fill-2 hover:text-text-1",
             )}
           >
             {item.label}
-            {activeKey === item.key ? <span className="absolute bottom-0 left-0 h-[2px] w-full bg-brand-6" /> : null}
           </button>
-        ))}
-      </div>
+        );
+      })}
     </div>
   );
 }
@@ -1581,15 +2235,15 @@ export const Message: MessageContextType & {
     updateMessageList((list) => list.filter((msg) => msg.id !== id));
   },
 
-  info: (content, duration = 3000) => {
+  info: (content, duration = 2000) => {
     return Message.addMessage({ type: "info", content, duration, closable: false });
   },
 
-  normal: (content, duration = 3000) => {
+  normal: (content, duration = 2000) => {
     return Message.addMessage({ type: "normal", content, duration, closable: false });
   },
 
-  success: (content, duration = 3000) => {
+  success: (content, duration = 2000) => {
     return Message.addMessage({ type: "success", content, duration, closable: false });
   },
 
@@ -1601,7 +2255,7 @@ export const Message: MessageContextType & {
     return Message.addMessage({ type: "error", content, duration, closable: false });
   },
 
-  open: ({ type = "normal", content, duration = 3000, closable = false, onClose }) => {
+  open: ({ type = "normal", content, duration = type === "warning" || type === "error" ? 3000 : 2000, closable = false, onClose }) => {
     return Message.addMessage({ type, content, duration, closable, onClose });
   },
 
@@ -1648,7 +2302,7 @@ export function MessageContainer() {
   if (list.length === 0) return null;
 
   return (
-    <div className="fixed top-4 left-1/2 z-[9999] -translate-x-1/2 flex flex-col items-center gap-2">
+    <div className="pointer-events-none fixed left-1/2 top-5 z-[9999] flex -translate-x-1/2 flex-col items-center gap-2.5">
       {list.map((msg) => (
         <MessageItem key={msg.id} msg={msg} onRemove={() => Message.removeMessage(msg.id)} />
       ))}
@@ -1659,24 +2313,24 @@ export function MessageContainer() {
 function MessageItem({ msg, onRemove }: { msg: MessageInstance; onRemove: () => void }) {
   const typeConfig = {
     info: {
-      bg: "bg-brand-6",
-      icon: <Info size={18} className="text-white" />,
+      iconWrap: "bg-brand-1 text-brand-6",
+      icon: <Info size={16} />,
     },
     normal: {
-      bg: "bg-text-2",
-      icon: <Info size={18} className="text-white" />,
+      iconWrap: "bg-fill-2 text-text-2",
+      icon: <Info size={16} />,
     },
     success: {
-      bg: "bg-success",
-      icon: <CheckCircle size={18} className="text-white" />,
+      iconWrap: "bg-success/10 text-success",
+      icon: <CheckCircle size={16} />,
     },
     warning: {
-      bg: "bg-warning",
-      icon: <AlertTriangle size={18} className="text-white" />,
+      iconWrap: "bg-warning/10 text-warning",
+      icon: <AlertTriangle size={16} />,
     },
     error: {
-      bg: "bg-danger",
-      icon: <XCircle size={18} className="text-white" />,
+      iconWrap: "bg-danger/10 text-danger",
+      icon: <XCircle size={16} />,
     },
   };
 
@@ -1685,13 +2339,14 @@ function MessageItem({ msg, onRemove }: { msg: MessageInstance; onRemove: () => 
   return (
     <div
       className={cn(
-        "flex items-center gap-3 rounded-lg px-4 py-3 shadow-lg min-w-[280px] max-w-[480px]",
-        config.bg
+        "pointer-events-auto flex min-w-[280px] max-w-[520px] items-center gap-3 rounded-xl border border-line-1 bg-white px-4 py-3 text-text-1 shadow-soft",
       )}
       style={{ animation: "fadeUp 0.3s ease-out" }}
     >
-      {config.icon}
-      <div className="flex-1 text-sm text-white">{msg.content}</div>
+      <span className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-full", config.iconWrap)}>
+        {config.icon}
+      </span>
+      <div className="flex-1 text-sm leading-6 text-text-1">{msg.content}</div>
       {msg.closable && (
         <button
           type="button"
@@ -1699,7 +2354,7 @@ function MessageItem({ msg, onRemove }: { msg: MessageInstance; onRemove: () => 
             msg.onClose?.();
             onRemove();
           }}
-          className="text-white/80 hover:text-white"
+          className="text-text-3 transition hover:text-text-1"
         >
           <X size={16} />
         </button>

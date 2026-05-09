@@ -5,10 +5,10 @@ export type PageDepth = "core" | "secondary" | "placeholder";
 export type ViewKey =
   | "dashboard"
   | "sales-orders"
-  | "retail-cashier"
-  | "inventory-query"
-  | "receipt-entry"
-  | "customer-ledger"
+  | "sales-return"
+  | "sales-return-inbound"
+    | "inventory-query"
+    | "customer-ledger"
   | "product-management"
   | "customer-management"
   | "supplier-management"
@@ -18,13 +18,15 @@ export type ViewKey =
   | "purchase-orders"
   | "purchase-receipt"
   | "purchase-return"
+  | "purchase-return-stockout"
   | "stock-transfer"
   | "stock-count"
   | "stock-loss"
   | "receivable-query"
   | "payable-query"
-  | "payment-entry"
-  | "sales-summary"
+  | "receipt-management"
+  | "payment-management"
+    | "sales-summary"
   | "inventory-balance"
   | "user-permission"
   | "document-number"
@@ -148,7 +150,6 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "list",
         depth: "secondary",
         description: "维护商品档案、分类、规格和价格策略。",
-        isIncomplete: true,
       },
       {
         key: "customer-management",
@@ -156,7 +157,6 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "list",
         depth: "secondary",
         description: "维护客户等级、账期和往来策略。",
-        isIncomplete: true,
       },
       {
         key: "supplier-management",
@@ -164,7 +164,6 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "list",
         depth: "secondary",
         description: "维护供应商主体、合作属性和结算规则。",
-        isIncomplete: true,
       },
       {
         key: "warehouse-management",
@@ -172,7 +171,6 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "list",
         depth: "secondary",
         description: "维护仓库档案、用途和库存归属。",
-        isIncomplete: true,
       },
     ],
   },
@@ -196,25 +194,27 @@ export const inventoryNavGroups: NavGroup[] = [
         isIncomplete: true,
       },
       {
+        key: "sales-return",
+        label: "销售退货",
+        pageType: "list",
+        depth: "secondary",
+        description: "查看销售退货记录与客户逆向处理状态。",
+        isIncomplete: true,
+      },
+      {
+        key: "sales-return-inbound",
+        label: "销售退货入库",
+        pageType: "list",
+        depth: "secondary",
+        description: "查看销售退货入库执行记录与库存回加状态。",
+        isIncomplete: true,
+      },
+      {
         key: "sales-query",
         label: "销售查询",
         pageType: "query",
         depth: "secondary",
         description: "查询订单、客户、商品维度的销售记录。",
-        isIncomplete: true,
-      },
-    ],
-  },
-  {
-    id: "retail",
-    label: "零售管理",
-    children: [
-      {
-        key: "retail-cashier",
-        label: "零售收银",
-        pageType: "cashier",
-        depth: "core",
-        description: "承接门店现场成交，完成搜索、加购、折让、收款。",
         isIncomplete: true,
       },
     ],
@@ -245,6 +245,14 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "list",
         depth: "secondary",
         description: "查看采购退货记录与供应商协同状态。",
+        isIncomplete: true,
+      },
+      {
+        key: "purchase-return-stockout",
+        label: "采购退货出库",
+        pageType: "list",
+        depth: "secondary",
+        description: "查看采购退货出库执行记录与库存扣减状态。",
         isIncomplete: true,
       },
     ],
@@ -300,14 +308,6 @@ export const inventoryNavGroups: NavGroup[] = [
         isIncomplete: true,
       },
       {
-        key: "receipt-entry",
-        label: "收款登记",
-        pageType: "form",
-        depth: "core",
-        description: "承接财务回款登记，录入客户、金额和付款方式。",
-        isIncomplete: true,
-      },
-      {
         key: "payable-query",
         label: "应付查询",
         pageType: "query",
@@ -315,15 +315,7 @@ export const inventoryNavGroups: NavGroup[] = [
         description: "查看供应商应付余额与账期。",
         isIncomplete: true,
       },
-      {
-        key: "payment-entry",
-        label: "付款登记",
-        pageType: "form",
-        depth: "secondary",
-        description: "记录对供应商付款及付款备注。",
-        isIncomplete: true,
-      },
-    ],
+      ],
   },
   {
     id: "stats",
@@ -414,7 +406,6 @@ export const dashboardFeatureCards: DashboardFeature[] = [
 
 export const dashboardTools: DashboardTool[] = [
   { title: "销售订单", desc: "查看订单、跟踪状态、进入开单主链路。", color: "from-blue-50 to-blue-100", icon: "blue" },
-  { title: "零售收银", desc: "快速录入商品，完成门店成交与收款。", color: "from-cyan-50 to-cyan-100", icon: "cyan" },
   { title: "库存查询", desc: "按仓库、商品、状态查看实时库存。", color: "from-sky-50 to-sky-100", icon: "sky" },
   { title: "收款登记", desc: "承接财务回款登记和备注记录。", color: "from-violet-50 to-violet-100", icon: "violet" },
   { title: "客户往来", desc: "查看客户应收和回款明细。", color: "from-amber-50 to-amber-100", icon: "amber" },
@@ -617,20 +608,10 @@ export const placeholderSummaries: Record<ViewKey, PlaceholderSummary> = {
     desc: "核心列表页，用于查询、新增和跟踪批发订单。",
     bullets: ["查询区", "操作区", "订单表格"],
   },
-  "retail-cashier": {
-    title: "零售收银",
-    desc: "核心收银页，用于门店成交、改价和即时收款。",
-    bullets: ["商品录入区", "购物清单", "结算区"],
-  },
   "inventory-query": {
     title: "库存查询",
     desc: "核心查询页，用于查看现存、占用、可用库存。",
     bullets: ["筛选区", "库存表格", "预警状态"],
-  },
-  "receipt-entry": {
-    title: "收款登记",
-    desc: "核心表单页，用于登记客户回款。",
-    bullets: ["客户选择", "金额录入", "底部操作"],
   },
   "customer-ledger": {
     title: "客户往来查询",
@@ -662,6 +643,16 @@ export const placeholderSummaries: Record<ViewKey, PlaceholderSummary> = {
     desc: "查看和执行销售出库，后续补齐详情和流程。",
     bullets: ["列表骨架", "状态跟踪", "详情延展"],
   },
+  "sales-return": {
+    title: "销售退货",
+    desc: "查看销售退货申请与逆向处理进度。",
+    bullets: ["列表骨架", "关键字段", "后续联动"],
+  },
+  "sales-return-inbound": {
+    title: "销售退货入库",
+    desc: "查看销售退货入库执行记录。",
+    bullets: ["列表骨架", "关键字段", "后续联动"],
+  },
   "sales-query": {
     title: "销售查询",
     desc: "查询订单与销售结果，补充统计视角。",
@@ -680,6 +671,11 @@ export const placeholderSummaries: Record<ViewKey, PlaceholderSummary> = {
   "purchase-return": {
     title: "采购退货",
     desc: "查看采购退货记录。",
+    bullets: ["列表骨架", "关键字段", "后续联动"],
+  },
+  "purchase-return-stockout": {
+    title: "采购退货出库",
+    desc: "查看采购退货出库执行记录。",
     bullets: ["列表骨架", "关键字段", "后续联动"],
   },
   "stock-transfer": {
@@ -702,15 +698,20 @@ export const placeholderSummaries: Record<ViewKey, PlaceholderSummary> = {
     desc: "查看客户应收余额与账龄。",
     bullets: ["查询区", "结果区", "后续联动"],
   },
+  "receipt-management": {
+    title: "收款单",
+    desc: "管理客户收款记录，支持登记、确认和核销。",
+    bullets: ["列表页", "新增/编辑页", "详情页"],
+  },
   "payable-query": {
     title: "应付查询",
     desc: "查看供应商应付余额与账期。",
     bullets: ["查询区", "结果区", "后续联动"],
   },
-  "payment-entry": {
-    title: "付款登记",
-    desc: "记录供应商付款及备注。",
-    bullets: ["表单骨架", "关键字段", "后续联动"],
+  "payment-management": {
+    title: "付款单",
+    desc: "管理供应商付款记录，支持登记、确认和核销。",
+    bullets: ["列表页", "新增/编辑页", "详情页"],
   },
   "sales-summary": {
     title: "销售汇总",
