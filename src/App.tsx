@@ -92,7 +92,7 @@ function ShellWrapper() {
 
 export default function App() {
   return (
-    <HashRouter unstable_useTransitions={false}>
+    <HashRouter>
       <ShellWrapper />
       <MessageContainer />
     </HashRouter>
