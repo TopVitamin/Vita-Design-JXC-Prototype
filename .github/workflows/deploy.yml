@@ -1,11 +1,9 @@
-name: Deploy to pmvitamin.com
+name: Deploy to server
 
 on:
   push:
     branches: [main]
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -26,12 +24,13 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Deploy to server
-        uses: easingthemes/ssh-deploy@main
-        with:
-          SSH_PRIVATE_KEY: ${{ secrets.SERVER_SSH_KEY }}
-          REMOTE_HOST: ${{ secrets.SERVER_HOST }}
-          REMOTE_USER: ${{ secrets.SERVER_USER }}
-          SOURCE: dist/
-          TARGET: /var/www/pmvitamin.com/projects/Vita-Design-JXC-Prototype/
-          ARGS: -avz --delete
+      - name: Deploy via webhook
+        env:
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+        run: |
+          cd dist
+          tar czf ../deploy.tar.gz .
+          cd ..
+          curl -s -X POST https://pmvitamin.com/deploy/Vita-Design-JXC-Prototype \
+            -H "Authorization: Bearer $DEPLOY_TOKEN" \
+            --data-binary @deploy.tar.gz
