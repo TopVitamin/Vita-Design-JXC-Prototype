@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { TABLE_MIN_WIDTH } from "../utils/tableConstants";
 import { Button, FilterActions, FilterField, Pagination, ResizableHeaderCell, SearchInput, Select, TableSortHeader, useResizableColumns } from "../components/Ui";
 import { DataCell, StatusCell } from "../components/TableCells";
+import { EmptyStateRow } from "../components/ModuleKit";
 import { inventoryRecords } from "../data/mock";
 
 export function InventoryQueryPage() {
@@ -103,7 +104,7 @@ export function InventoryQueryPage() {
               </tr>
             </thead>
             <tbody>
-              {paginatedRows.map((item) => (
+              {paginatedRows.length === 0 ? <EmptyStateRow colSpan={8} /> : paginatedRows.map((item) => (
                 <tr key={item.sku} className="h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
                   <DataCell style={getColumnStyle("sku")} nowrap>{item.sku}</DataCell>
                   <DataCell style={getColumnStyle("productName")} nowrap className="text-text-1" truncate title={item.productName}>{item.productName}</DataCell>

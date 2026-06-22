@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { EmptyStateRow } from "../components/ModuleKit";
 import { TABLE_MIN_WIDTH } from "../utils/tableConstants";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Button, Checkbox, FilterActions, FilterField, FormField, HintBox, Input, Message, PageTitle, Pagination, ResizableHeaderCell, SearchInput, Select, StatusPill, TextArea, useResizableColumns } from "../components/Ui";
@@ -132,7 +133,7 @@ export function ReceiptManagementListPage() {
               </tr>
             </thead>
             <tbody>
-              {paginatedRows.map((r) => (
+              {paginatedRows.length === 0 ? <EmptyStateRow colSpan={9} /> : paginatedRows.map((r) => (
                 <tr key={r.id} className="h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
                   <DataCell style={getColumnStyle("receiptNo")} nowrap className="text-link"><div className="overflow-hidden text-ellipsis cursor-pointer" onClick={() => navigate(`/receipt-management/${r.id}`)}>{r.receiptNo}</div></DataCell>
                   <StatusCell style={getColumnStyle("status")} nowrap tone={r.statusTone} label={r.status} />

@@ -1,3 +1,4 @@
+import { EmptyStateRow } from "../components/ModuleKit";
 import { useMemo, useState } from "react";
 import { TABLE_MIN_WIDTH } from "../utils/tableConstants";
 import { useNavigate } from "react-router-dom";
@@ -181,7 +182,7 @@ export function PayableQueryPage() {
               </tr>
             </thead>
             <tbody>
-              {paginatedRows.map((row) => (
+              {paginatedRows.length === 0 ? <EmptyStateRow colSpan={9} /> : paginatedRows.map((row) => (
                 <tr key={row.supplierCode} className="h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
                   <td className="border-r border-line-1 px-4 whitespace-nowrap text-link" style={getColumnStyle("supplier")} title={row.supplierName}>
                     <div className="overflow-hidden text-ellipsis cursor-pointer" onClick={() => handleRegisterPayment(row)}>

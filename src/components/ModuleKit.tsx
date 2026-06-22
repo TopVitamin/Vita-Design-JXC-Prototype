@@ -73,8 +73,9 @@ export function EmptyStateRow({ colSpan, text = "暂无数据" }: { colSpan: num
   );
 }
 
-export function TextAction({ children, onClick }: { children: string; onClick: () => void }) {
-  return <button type="button" className="text-[13px] text-brand-6 transition hover:text-brand-7" onClick={onClick}>{children}</button>;
+export function TextAction({ children, onClick, tone = "brand" }: { children: string; onClick: () => void; tone?: "brand" | "danger" }) {
+  const cls = tone === "danger" ? "text-danger hover:text-danger/80" : "text-brand-6 hover:text-brand-7";
+  return <button type="button" className={cn("text-[13px] transition", cls)} onClick={onClick}>{children}</button>;
 }
 
 export function DetailValue({ label, value, className }: { label: string; value: ReactNode; className?: string }) {

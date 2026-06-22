@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { EmptyStateRow } from "../components/ModuleKit";
 import { TABLE_MIN_WIDTH } from "../utils/tableConstants";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Button, Checkbox, DateField, FilterActions, FilterField, FormField, HintBox, Input, Message, PageTitle, Pagination, ResizableHeaderCell, SearchInput, Select, StatusPill, TextArea, useResizableColumns } from "../components/Ui";
@@ -137,7 +138,7 @@ export function PaymentManagementListPage() {
               </tr>
             </thead>
             <tbody>
-              {paginatedRows.map((r) => (
+              {paginatedRows.length === 0 ? <EmptyStateRow colSpan={9} /> : paginatedRows.map((r) => (
                 <tr key={r.id} className="h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
                   <DataCell style={getColumnStyle("paymentNo")} nowrap className="text-link"><div className="overflow-hidden text-ellipsis cursor-pointer" onClick={() => navigate(`/payment-management/${r.id}`)}>{r.paymentNo}</div></DataCell>
                   <StatusCell style={getColumnStyle("status")} nowrap tone={r.statusTone} label={r.status} />

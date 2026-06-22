@@ -392,7 +392,7 @@ export function AppShell({
           {/* Search bar */}
           <label
             ref={searchWrapRef}
-            className="relative hidden h-8 w-[220px] items-center gap-2 rounded-lg border border-white/15 bg-white/8 px-3 text-sm text-white/70 backdrop-blur-sm transition-colors focus-within:border-white/30 focus-within:bg-white/12 md:flex"
+            className="relative hidden h-8 w-[220px] items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-3 text-sm text-white/70 backdrop-blur-sm transition-colors focus-within:border-white/30 focus-within:bg-white/20 md:flex"
           >
             <Search size={13} className="shrink-0 text-white/50" />
             <input
@@ -613,7 +613,7 @@ export function AppShell({
 
 function SidebarBadge() {
   return (
-    <span className="ml-auto shrink-0 rounded-md bg-[rgba(255,125,0,0.12)] px-1.5 py-0.5 text-[11px] leading-4 text-warning">
+    <span className="ml-auto shrink-0 rounded-md bg-warning/10 px-1.5 py-0.5 text-[11px] leading-4 text-warning">
       未完善
     </span>
   );

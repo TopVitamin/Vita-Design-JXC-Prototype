@@ -1,6 +1,7 @@
 import { Button, FilterActions, FilterField, ResizableHeaderCell, SearchInput, Select, useResizableColumns } from "../components/Ui";
 import { TABLE_MIN_WIDTH } from "../utils/tableConstants";
 import { DataCell, StatusCell } from "../components/TableCells";
+import { EmptyStateRow } from "../components/ModuleKit";
 import { ledgerRecords } from "../data/mock";
 
 export function CustomerLedgerPage() {
@@ -56,7 +57,7 @@ export function CustomerLedgerPage() {
                 </tr>
               </thead>
               <tbody>
-                {ledgerRecords.map((record) => (
+                {ledgerRecords.length === 0 ? <EmptyStateRow colSpan={8} /> : ledgerRecords.map((record) => (
                   <tr key={record.id} className="h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
                     <DataCell style={getColumnStyle("customer")} nowrap>{record.customer}</DataCell>
                     <DataCell style={getColumnStyle("documentType")} nowrap>{record.documentType}</DataCell>
