@@ -67,7 +67,6 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "dashboard",
         depth: "core",
         description: "展示核心入口、待办和主链路概览。",
-        isIncomplete: true,
       },
     ],
   },
@@ -122,7 +121,6 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "list",
         depth: "secondary",
         description: "查看采购入库和到货状态。",
-        isIncomplete: true,
       },
       {
         key: "purchase-return",
@@ -130,7 +128,6 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "list",
         depth: "secondary",
         description: "查看采购退货记录与供应商协同状态。",
-        isIncomplete: true,
       },
       {
         key: "purchase-return-stockout",
@@ -138,7 +135,6 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "list",
         depth: "secondary",
         description: "查看采购退货出库执行记录与库存扣减状态。",
-        isIncomplete: true,
       },
     ],
   },
@@ -159,7 +155,6 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "detail",
         depth: "secondary",
         description: "查看和执行销售出库，跟踪发货状态。",
-        isIncomplete: true,
       },
       {
         key: "sales-return",
@@ -167,7 +162,6 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "list",
         depth: "secondary",
         description: "查看销售退货记录与客户逆向处理状态。",
-        isIncomplete: true,
       },
       {
         key: "sales-return-inbound",
@@ -175,7 +169,6 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "list",
         depth: "secondary",
         description: "查看销售退货入库执行记录与库存回加状态。",
-        isIncomplete: true,
       },
       {
         key: "sales-query",
@@ -183,7 +176,6 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "query",
         depth: "secondary",
         description: "查询订单、客户、商品维度的销售记录。",
-        isIncomplete: true,
       },
     ],
   },
@@ -197,7 +189,6 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "query",
         depth: "core",
         description: "展示现存、占用、可用库存，承接共享底账查询。",
-        isIncomplete: true,
       },
       {
         key: "stock-transfer",
@@ -205,7 +196,6 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "list",
         depth: "secondary",
         description: "记录仓间调拨和调拨执行状态。",
-        isIncomplete: true,
       },
       {
         key: "stock-count",
@@ -213,7 +203,6 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "list",
         depth: "secondary",
         description: "查看盘点计划、差异和处理结果。",
-        isIncomplete: true,
       },
       {
         key: "stock-loss",
@@ -221,7 +210,6 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "list",
         depth: "secondary",
         description: "记录报损申请和库存调整结果。",
-        isIncomplete: true,
       },
     ],
   },
@@ -269,7 +257,6 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "query",
         depth: "secondary",
         description: "提供基础销售汇总指标和趋势。",
-        isIncomplete: true,
       },
       {
         key: "inventory-balance",
@@ -277,7 +264,6 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "query",
         depth: "secondary",
         description: "提供库存余额和仓库口径视图。",
-        isIncomplete: true,
       },
       {
         key: "customer-ledger",
@@ -285,7 +271,6 @@ export const inventoryNavGroups: NavGroup[] = [
         pageType: "query",
         depth: "core",
         description: "查看客户应收、回款记录和往来余额。",
-        isIncomplete: true,
       },
     ],
   },
