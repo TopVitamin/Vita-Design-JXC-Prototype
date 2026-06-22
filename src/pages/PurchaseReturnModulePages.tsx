@@ -515,7 +515,7 @@ function PurchaseReturnEditorPage({ mode }: { mode: "create" | "edit" }) {
       </SurfaceCard>
       <SurfaceCard title="商品明细" extra={`退货总数量 ${summaryQty} 件`}>
         <div className="overflow-x-auto">
-          <table className="min-w-[1420px] border-collapse text-sm">
+          <table className="w-full min-w-[1420px] border-collapse text-sm">
             <thead className="bg-fill-2 text-left text-text-2">
               <tr className="h-[42px]">{["序号", "商品", "规格型号", "单位", "原入库数量", "可退数量", "本次退货数量", "退货原因", "行备注"].map((label) => <th key={label} className="border-b border-line-1 px-3">{label}</th>)}</tr>
             </thead>
@@ -542,7 +542,7 @@ function PurchaseReturnEditorPage({ mode }: { mode: "create" | "edit" }) {
                 );
               })}
             </tbody>
-            <SummaryFooter colSpan={9}>本次退货合计：{summaryQty} 件</SummaryFooter>
+            <SummaryFooter colSpan={9} lineCount={form.lines.length}>本次退货合计：{summaryQty} 件</SummaryFooter>
           </table>
         </div>
       </SurfaceCard>
@@ -678,7 +678,7 @@ function PurchaseReturnStockoutEditorPage({ mode }: { mode: "create" | "edit" })
       </SurfaceCard>
       <SurfaceCard title="商品明细" extra={`本次出库：${totalQty} 件 | 总金额 ${formatMoney(totalAmount)}`}>
         <div className="overflow-x-auto">
-          <table className="min-w-[1480px] border-collapse text-sm">
+          <table className="w-full min-w-[1480px] border-collapse text-sm">
             <thead className="bg-fill-2 text-left text-text-2"><tr className="h-[42px]">{["序号", "商品", "规格型号", "单位", "退货申请数量", "未出库数量", "本次出库数量", "出库单价", "出库金额", "行备注"].map((label) => <th key={label} className="border-b border-line-1 px-3">{label}</th>)}</tr></thead>
             <tbody>
               {form.lines.map((line, index) => {
@@ -699,7 +699,7 @@ function PurchaseReturnStockoutEditorPage({ mode }: { mode: "create" | "edit" })
                 );
               })}
             </tbody>
-            <SummaryFooter colSpan={10}>本次出库合计：{totalQty} 件 | {formatMoney(totalAmount)}</SummaryFooter>
+            <SummaryFooter colSpan={10} lineCount={form.lines.length}>本次出库合计：{totalQty} 件 | {formatMoney(totalAmount)}</SummaryFooter>
           </table>
         </div>
       </SurfaceCard>
@@ -756,7 +756,7 @@ export function PurchaseReturnDetailPage() {
       </SurfaceCard>
       <SurfaceCard title="商品明细" extra={`退货总数量 ${record.totalQty} 件`}>
         <div className="overflow-x-auto">
-          <table className="min-w-[1380px] border-collapse text-sm">
+          <table className="w-full min-w-[1380px] border-collapse text-sm">
             <thead className="bg-fill-2 text-left text-text-2">
               <tr className="h-[42px]">
                 {(showProgressCols
@@ -849,7 +849,7 @@ export function PurchaseReturnStockoutDetailPage() {
       </SurfaceCard>
       <SurfaceCard title="商品明细" extra={`本次出库：${record.totalQty} 件 | 总金额 ${formatMoney(record.totalAmount)}`}>
         <div className="overflow-x-auto">
-          <table className="min-w-[1380px] border-collapse text-sm">
+          <table className="w-full min-w-[1380px] border-collapse text-sm">
             <thead className="bg-fill-2 text-left text-text-2"><tr className="h-[42px]">{["序号", "商品", "规格型号", "单位", "退货申请数量", "本次出库数量", "出库单价", "出库金额", "行备注"].map((label) => <th key={label} className="border-b border-line-1 px-3">{label}</th>)}</tr></thead>
             <tbody>{record.lines.map((line, index) => <tr key={line.id} className="border-b border-line-1"><td className="px-3 py-2.5">{index + 1}</td><td className="px-3 py-2.5">{`${line.skuCode} ${line.skuName}`}</td><td className="px-3 py-2.5">{line.spec || "-"}</td><td className="px-3 py-2.5">{line.unit || "-"}</td><td className="px-3 py-2.5">{line.requestedQty}</td><td className="px-3 py-2.5 font-medium">{line.stockoutQty}</td><td className="px-3 py-2.5">{formatMoney(line.price)}</td><td className="px-3 py-2.5">{formatMoney(line.amount)}</td><td className="px-3 py-2.5">{line.note || "-"}</td></tr>)}</tbody>
           </table>

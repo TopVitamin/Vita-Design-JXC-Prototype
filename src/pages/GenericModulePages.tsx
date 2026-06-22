@@ -498,7 +498,7 @@ export function GenericCrudEditorPage({
                 <Button tone="primary" size="sm" onClick={addLine}>新增空行</Button>
               </div>
               <div className="overflow-x-auto">
-                <table className="min-w-[980px] border-collapse text-sm lg:min-w-full">
+                <table className="w-full min-w-[980px] border-collapse text-sm">
                   <thead className="bg-fill-2 text-left text-text-2">
                     <tr className="h-[42px]">
                       {["编码", "名称", "规格", "数量", "单位", "单价", "金额", "备注", "操作"].map((label) => (
@@ -631,7 +631,7 @@ export function GenericCrudDetailPage({ view }: { view: ViewKey }) {
           {module.kind === "document" && record.lines ? (
             <SalesOrderSection title="单据明细">
               <div className="overflow-x-auto">
-                <table className="min-w-[980px] border-collapse text-sm lg:min-w-full">
+                <table className="w-full min-w-[980px] border-collapse text-sm">
                   <thead className="bg-fill-2 text-left text-text-2">
                     <tr className="h-[42px]">
                       {["编码", "名称", "规格", "数量", "单位", "单价", "金额", "备注"].map((label) => (

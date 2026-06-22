@@ -1487,7 +1487,7 @@ function PurchaseReceiptEditorPage({ mode }: { mode: "create" | "edit" }) {
 
       <SurfaceCard title="商品明细">
         <div className="overflow-x-auto">
-          <table className="min-w-[1520px] border-collapse text-sm">
+          <table className="w-full min-w-[1520px] border-collapse text-sm">
             <thead className="bg-fill-2 text-left text-text-2">
               <tr className="h-[42px]">
                 {["序号", "商品", "规格型号", "单位", "订单数量", "本次实收数量", "本次入库数量", "差异数量", "差异原因", "异常说明", "入库单价", "入库金额"].map((label) => (
@@ -1535,7 +1535,7 @@ function PurchaseReceiptEditorPage({ mode }: { mode: "create" | "edit" }) {
                 </tr>
               ))}
             </tbody>
-            <SummaryFooter colSpan={12}>合计：{formatInt(summary.totalQty)} 件 | {formatMoney(summary.totalAmount)}</SummaryFooter>
+            <SummaryFooter colSpan={12} lineCount={form.lines.length}>合计：{formatInt(summary.totalQty)} 件 | {formatMoney(summary.totalAmount)}</SummaryFooter>
           </table>
         </div>
       </SurfaceCard>
@@ -1928,7 +1928,7 @@ export function PurchaseReceiptDetailPage() {
 
       <SurfaceCard title="商品明细" extra={`本次入库：${formatInt(summary.totalQty)} 件 | 总金额 ${formatMoney(summary.totalAmount)}`}>
         <div className="overflow-x-auto">
-          <table className="min-w-[1500px] border-collapse text-sm">
+          <table className="w-full min-w-[1500px] border-collapse text-sm">
             <thead className="bg-fill-2 text-left text-text-2">
               <tr className="h-[42px]">
                 {["序号", "商品", "规格型号", "单位", "订单数量", "本次实收数量", "本次入库数量", "差异数量", "差异原因", "异常说明", "入库单价", "入库金额"].map((label) => (
@@ -1956,7 +1956,7 @@ export function PurchaseReceiptDetailPage() {
                 </tr>
               ))}
             </tbody>
-            <SummaryFooter colSpan={12}>合计 {formatInt(summary.totalQty)} 件 | {formatMoney(summary.totalAmount)}</SummaryFooter>
+            <SummaryFooter colSpan={12} lineCount={record.lines.length}>合计 {formatInt(summary.totalQty)} 件 | {formatMoney(summary.totalAmount)}</SummaryFooter>
           </table>
         </div>
       </SurfaceCard>

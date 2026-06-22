@@ -328,10 +328,10 @@ function SalesReturnEditorPage({ mode }: { mode: "create" | "edit" }) {
       </SurfaceCard>
       <SurfaceCard title="商品明细" extra={`退货总数量 ${totalQty} 件 | 总金额 ${formatMoney(totalAmount)}`}>
         <div className="overflow-x-auto">
-          <table className="min-w-[1540px] border-collapse text-sm">
+          <table className="w-full min-w-[1540px] border-collapse text-sm">
             <thead className="bg-fill-2 text-left text-text-2"><tr className="h-[42px]">{["序号", "商品", "规格型号", "单位", "原出库数量", "可退数量", "申请退货数量", "退货原因", "单价（含税）", "退货金额", "行备注"].map((label) => <th key={label} className="border-b border-line-1 px-3">{label}</th>)}</tr></thead>
             <tbody>{form.lines.map((line, index) => <tr key={line.id} className={cn("border-b border-line-1", line.availableQty === 0 && "bg-fill-2 text-text-3")}><td className="px-3 py-2.5">{index + 1}</td><td className="px-3 py-2.5">{`${line.skuCode} ${line.skuName}`}</td><td className="px-3 py-2.5">{line.spec || "-"}</td><td className="px-3 py-2.5">{line.unit || "-"}</td><td className="px-3 py-2.5">{line.originalStockoutQty}</td><td className="px-3 py-2.5 text-warning">{line.availableQty}</td><td className="px-3 py-2.5"><Input value={String(line.returnQty || 0)} onChange={(value) => updateLine(line.id, { returnQty: Number(value) || 0 })} className="text-right" readOnly={line.availableQty === 0} />{errors[`line-${index}-qty`] ? <div className="mt-1 text-xs text-danger">{errors[`line-${index}-qty`]}</div> : null}</td><td className="px-3 py-2.5">{Number(line.returnQty || 0) > 0 ? <><Select value={line.reason} onChange={(reason) => updateLine(line.id, { reason })} options={salesReturnReasonOptions} placeholder="请选择退货原因" />{errors[`line-${index}-reason`] ? <div className="mt-1 text-xs text-danger">{errors[`line-${index}-reason`]}</div> : null}</> : <ReadonlyValue value="-" />}</td><td className="px-3 py-2.5">{formatMoney(line.price)}</td><td className="px-3 py-2.5">{formatMoney(line.amount)}</td><td className="px-3 py-2.5"><Input value={line.note} onChange={(value) => updateLine(line.id, { note: value })} readOnly={line.availableQty === 0} placeholder="行备注（选填）" /></td></tr>)}</tbody>
-            <SummaryFooter colSpan={11}>退货总数量 {totalQty} 件 | 总金额 {formatMoney(totalAmount)}</SummaryFooter>
+            <SummaryFooter colSpan={11} lineCount={form.lines.length}>退货总数量 {totalQty} 件 | 总金额 {formatMoney(totalAmount)}</SummaryFooter>
           </table>
         </div>
       </SurfaceCard>
@@ -438,10 +438,10 @@ function SalesReturnInboundEditorPage({ mode }: { mode: "create" | "edit" }) {
       </SurfaceCard>
       <SurfaceCard title="商品明细" extra={`本次入库 ${totalQty} 件 | 总金额 ${formatMoney(totalAmount)}`}>
         <div className="overflow-x-auto">
-          <table className="min-w-[1500px] border-collapse text-sm">
+          <table className="w-full min-w-[1500px] border-collapse text-sm">
             <thead className="bg-fill-2 text-left text-text-2"><tr className="h-[42px]">{["序号", "商品", "规格型号", "单位", "退货申请数量", "未入库数量", "本次入库数量", "单价（含税）", "入库金额", "行备注"].map((label) => <th key={label} className="border-b border-line-1 px-3">{label}</th>)}</tr></thead>
             <tbody>{form.lines.map((line, index) => { const disabled = line.pendingQty === 0; return <tr key={line.id} className={cn("border-b border-line-1", disabled && "bg-fill-2 text-text-3")}><td className="px-3 py-2.5">{index + 1}</td><td className="px-3 py-2.5">{`${line.skuCode} ${line.skuName}`}</td><td className="px-3 py-2.5">{line.spec || "-"}</td><td className="px-3 py-2.5">{line.unit || "-"}</td><td className="px-3 py-2.5">{line.requestedQty}</td><td className="px-3 py-2.5 text-warning">{line.pendingQty}</td><td className="px-3 py-2.5"><Input value={String(line.inboundQty || 0)} onChange={(value) => updateLine(line.id, { inboundQty: Number(value) || 0 })} className="text-right" readOnly={disabled} />{errors[`line-${index}-qty`] ? <div className="mt-1 text-xs text-danger">{errors[`line-${index}-qty`]}</div> : null}</td><td className="px-3 py-2.5">{formatMoney(line.price)}</td><td className="px-3 py-2.5">{formatMoney(line.amount)}</td><td className="px-3 py-2.5"><Input value={line.note} onChange={(value) => updateLine(line.id, { note: value })} readOnly={disabled} placeholder="行备注（选填）" /></td></tr>; })}</tbody>
-            <SummaryFooter colSpan={10}>本次入库合计：{totalQty} 件 | {formatMoney(totalAmount)}</SummaryFooter>
+            <SummaryFooter colSpan={10} lineCount={form.lines.length}>本次入库合计：{totalQty} 件 | {formatMoney(totalAmount)}</SummaryFooter>
           </table>
         </div>
       </SurfaceCard>
@@ -497,7 +497,7 @@ export function SalesReturnDetailPage() {
       </SurfaceCard>
       <SurfaceCard title="商品明细" extra={`退货总数量 ${record.totalQty} 件 | 总金额 ${formatMoney(record.totalAmount)}`}>
         <div className="overflow-x-auto">
-          <table className="min-w-[1500px] border-collapse text-sm">
+          <table className="w-full min-w-[1500px] border-collapse text-sm">
             <thead className="bg-fill-2 text-left text-text-2">
               <tr className="h-[42px]">
                 {(showProgress
@@ -558,7 +558,7 @@ export function SalesReturnInboundDetailPage() {
       </SurfaceCard>
       <SurfaceCard title="商品明细" extra={`本次入库 ${record.totalQty} 件 | 总金额 ${formatMoney(record.totalAmount)}`}>
         <div className="overflow-x-auto">
-          <table className="min-w-[1500px] border-collapse text-sm">
+          <table className="w-full min-w-[1500px] border-collapse text-sm">
             <thead className="bg-fill-2 text-left text-text-2"><tr className="h-[42px]">{["序号", "商品", "规格型号", "单位", "退货申请数量", "本次入库数量", "单价（含税）", "入库金额", "行备注"].map((label) => <th key={label} className="border-b border-line-1 px-3">{label}</th>)}</tr></thead>
             <tbody>{record.lines.map((line, index) => <tr key={line.id} className="border-b border-line-1"><td className="px-3 py-2.5">{index + 1}</td><td className="px-3 py-2.5">{`${line.skuCode} ${line.skuName}`}</td><td className="px-3 py-2.5">{line.spec || "-"}</td><td className="px-3 py-2.5">{line.unit || "-"}</td><td className="px-3 py-2.5">{line.requestedQty}</td><td className="px-3 py-2.5 font-medium">{line.inboundQty}</td><td className="px-3 py-2.5">{formatMoney(line.price)}</td><td className="px-3 py-2.5">{formatMoney(line.amount)}</td><td className="px-3 py-2.5">{line.note || "-"}</td></tr>)}</tbody>
           </table>

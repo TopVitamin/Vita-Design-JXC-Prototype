@@ -172,13 +172,17 @@ type SummaryFooterProps = {
   colSpan: number;
   children: ReactNode;
   className?: string;
+  /** 明细行数，为 0 时不显示合计，改为展示空数据提示 */
+  lineCount?: number;
+  emptyText?: string;
 };
 
-export function SummaryFooter({ colSpan, children, className }: SummaryFooterProps) {
+export function SummaryFooter({ colSpan, children, className, lineCount, emptyText = "暂无明细数据，请添加商品行" }: SummaryFooterProps) {
+  const isEmpty = lineCount === 0;
   return (
     <tfoot className={className ?? "bg-zinc-100"}>
-      <tr className="h-[42px] font-semibold text-text-1">
-        <td colSpan={colSpan} className="px-4">{children}</td>
+      <tr className={cn("h-[42px]", isEmpty ? "text-text-3" : "font-semibold text-text-1")}>
+        <td colSpan={colSpan} className="px-4">{isEmpty ? emptyText : children}</td>
       </tr>
     </tfoot>
   );

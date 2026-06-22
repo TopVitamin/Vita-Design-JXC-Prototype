@@ -598,7 +598,7 @@ function SalesOrderEditorPageV2({ mode }: { mode: "create" | "edit" }) {
           <Button tone="primary" onClick={addLine}>新增商品行</Button>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-[1620px] border-collapse text-sm">
+          <table className="w-full min-w-[1620px] border-collapse text-sm">
             <thead className="bg-fill-2 text-left text-text-2">
               <tr className="h-[42px]">{["序号", "商品", "规格型号", "单位", "可用库存", "销售数量", "单价（含税）", "税率", "折扣率", "金额（含税）", "行备注", "操作"].map((label) => <th key={label} className="border-b border-line-1 px-3">{label}</th>)}</tr>
             </thead>
@@ -637,7 +637,7 @@ function SalesOrderEditorPageV2({ mode }: { mode: "create" | "edit" }) {
                 </tr>
               ))}
             </tbody>
-            <SummaryFooter colSpan={12}>共 {summary.skuCount} 种商品 | 合计：{summary.totalQty} 件 | {formatMoney(summary.totalAmount)}</SummaryFooter>
+            <SummaryFooter colSpan={12} lineCount={form.lines.length}>共 {summary.skuCount} 种商品 | 合计：{summary.totalQty} 件 | {formatMoney(summary.totalAmount)}</SummaryFooter>
           </table>
         </div>
       </SurfaceCard>
@@ -772,7 +772,7 @@ function SalesStockoutEditorPageV2({ mode }: { mode: "create" | "edit" }) {
       </SurfaceCard>
       <SurfaceCard title="商品明细" extra={`本次出库 ${totalQty} 件 | 总金额 ${formatMoney(totalAmount)}`}>
         <div className="overflow-x-auto">
-          <table className="min-w-[1460px] border-collapse text-sm">
+          <table className="w-full min-w-[1460px] border-collapse text-sm">
             <thead className="bg-fill-2 text-left text-text-2"><tr className="h-[42px]">{["序号", "商品", "规格型号", "单位", "订单数量", "未出库数量", "本次出库数量", "单价（含税）", "出库金额", "异常备注"].map((label) => <th key={label} className="border-b border-line-1 px-3">{label}</th>)}</tr></thead>
             <tbody>
               {form.lines.map((line, index) => {
@@ -793,7 +793,7 @@ function SalesStockoutEditorPageV2({ mode }: { mode: "create" | "edit" }) {
                 );
               })}
             </tbody>
-            <SummaryFooter colSpan={10}>本次出库合计：{totalQty} 件 | {formatMoney(totalAmount)}</SummaryFooter>
+            <SummaryFooter colSpan={10} lineCount={form.lines.length}>本次出库合计：{totalQty} 件 | {formatMoney(totalAmount)}</SummaryFooter>
           </table>
         </div>
       </SurfaceCard>
@@ -859,7 +859,7 @@ export function SalesOrderDetailPageV2() {
       </SurfaceCard>
       <SurfaceCard title="商品明细" extra={`共 ${record.skuCount} 种商品 | 总金额 ${formatMoney(record.totalAmount)}`}>
         <div className="overflow-x-auto">
-          <table className="min-w-[1560px] border-collapse text-sm">
+          <table className="w-full min-w-[1560px] border-collapse text-sm">
             <thead className="bg-fill-2 text-left text-text-2">
               <tr className="h-[42px]">
                 {(showProgressCols
@@ -952,7 +952,7 @@ export function SalesStockoutDetailPageV2() {
       </SurfaceCard>
       <SurfaceCard title="商品明细" extra={`本次出库 ${record.totalQty} 件 | 总金额 ${formatMoney(record.totalAmount)}`}>
         <div className="overflow-x-auto">
-          <table className="min-w-[1420px] border-collapse text-sm">
+          <table className="w-full min-w-[1420px] border-collapse text-sm">
             <thead className="bg-fill-2 text-left text-text-2"><tr className="h-[42px]">{["序号", "商品", "规格型号", "单位", "订单数量", "本次出库数量", "单价（含税）", "出库金额", "异常备注"].map((label) => <th key={label} className="border-b border-line-1 px-3">{label}</th>)}</tr></thead>
             <tbody>{record.lines.map((line, index) => <tr key={line.id} className="border-b border-line-1"><td className="px-3 py-2.5">{index + 1}</td><td className="px-3 py-2.5">{`${line.skuCode} ${line.skuName}`}</td><td className="px-3 py-2.5">{line.spec || "-"}</td><td className="px-3 py-2.5">{line.unit || "-"}</td><td className="px-3 py-2.5">{line.orderQty}</td><td className="px-3 py-2.5 font-medium">{line.stockoutQty}</td><td className="px-3 py-2.5">{formatMoney(line.price)}</td><td className="px-3 py-2.5">{formatMoney(line.amount)}</td><td className="px-3 py-2.5">{line.note || "-"}</td></tr>)}</tbody>
           </table>
