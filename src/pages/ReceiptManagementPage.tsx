@@ -148,8 +148,8 @@ export function ReceiptManagementListPage() {
                       {r.status === "草稿" ? (
                         <>
                           <button className="text-link hover:text-link-hover" onClick={() => navigate(`/receipt-management/${r.id}/edit`)}>编辑</button>
-                          <button className="text-link hover:text-link-hover text-blue-600" onClick={() => { confirmReceiptRecord(r.id); Message.success("收款已确认"); setCurrentPage(1); }}>确认收款</button>
-                          <button className="text-link hover:text-link-hover text-red-500" onClick={() => { deleteReceiptRecord(r.id); Message.success("收款单已删除"); setCurrentPage(1); }}>删除</button>
+                          <button className="text-link hover:text-link-hover" onClick={() => { confirmReceiptRecord(r.id); Message.success("收款已确认"); setCurrentPage(1); }}>确认收款</button>
+                          <button className="text-danger hover:text-danger/80" onClick={() => { deleteReceiptRecord(r.id); Message.success("收款单已删除"); setCurrentPage(1); }}>删除</button>
                         </>
                       ) : null}
                     </div>
@@ -317,7 +317,7 @@ export function ReceiptManagementFormPage({ mode }: { mode: "create" | "edit" })
           <div className="text-sm text-text-2">关联出库单数量<span className="ml-2 text-text-1 font-medium">{receiptPreview.stats.linkedCount} 张</span></div>
           <div className="text-sm text-text-2">关联出库单金额合计<span className="ml-2 text-text-1 font-medium">{receiptPreview.stats.linkedAmount}</span></div>
           <div className="text-sm text-text-2">本次收款金额<span className="ml-2 text-text-1 font-medium">{moneyText(amount)}</span></div>
-          <div className="text-sm text-text-2">收款差额<span className={`ml-2 font-medium ${receiptPreview.stats.differenceTone === "blue" ? "text-blue-600" : receiptPreview.stats.differenceTone === "orange" ? "text-orange-500" : "text-green-600"}`}>{receiptPreview.stats.difference}</span></div>
+          <div className="text-sm text-text-2">收款差额<span className={`ml-2 font-medium ${receiptPreview.stats.differenceTone === "blue" ? "text-brand-6" : receiptPreview.stats.differenceTone === "orange" ? "text-warning" : "text-success"}`}>{receiptPreview.stats.difference}</span></div>
         </div>
       </div>
     </div>
@@ -379,7 +379,7 @@ export function ReceiptManagementDetailPage() {
             <div className="text-sm text-text-2">关联出库单数量<span className="ml-2 text-text-1 font-medium">{record.stats.linkedCount} 张</span></div>
             <div className="text-sm text-text-2">关联出库单金额合计<span className="ml-2 text-text-1 font-medium">{record.stats.linkedAmount}</span></div>
             <div className="text-sm text-text-2">本次收款金额<span className="ml-2 text-text-1 font-medium">{record.stats.receiptAmount}</span></div>
-            <div className="text-sm text-text-2">收款差额<span className={`ml-2 font-medium ${record.stats.differenceTone === "blue" ? "text-blue-600" : record.stats.differenceTone === "orange" ? "text-orange-500" : "text-green-600"}`}>{record.stats.difference}</span></div>
+            <div className="text-sm text-text-2">收款差额<span className={`ml-2 font-medium ${record.stats.differenceTone === "blue" ? "text-brand-6" : record.stats.differenceTone === "orange" ? "text-warning" : "text-success"}`}>{record.stats.difference}</span></div>
           </div>
         </div>
       ) : null}

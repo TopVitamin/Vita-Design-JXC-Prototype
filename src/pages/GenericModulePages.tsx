@@ -251,21 +251,21 @@ export function GenericCrudListPage({ view }: { view: ViewKey }) {
 
       {/* 启停用确认弹窗 */}
       {statusTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-[420px] rounded-xl border border-line-1 bg-white p-6 shadow-xl">
+        <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/40">
+          <div className="w-[420px] rounded-xl border border-line-1 bg-white p-6 shadow-drawer">
             <div className="mb-4 text-[15px] font-semibold text-text-1">
               确认{statusAction}：{String(statusTarget.name ?? statusTarget.code ?? "")}
             </div>
             {statusAction === "停用" ? (
               <div className="mb-4 space-y-1">
-                <div className="text-[13px] text-text-2">停用原因 <span className="text-red-500">*</span></div>
+                <div className="text-[13px] text-text-2">停用原因 <span className="text-danger">*</span></div>
                 <TextArea
                   value={stopReason}
                   onChange={(v) => { setStopReason(v); if (v.trim()) setStopReasonError(""); }}
                   maxLength={100}
                   placeholder="请填写停用原因"
                 />
-                {stopReasonError && <div className="text-[12px] text-red-500">{stopReasonError}</div>}
+                {stopReasonError && <div className="text-[12px] text-danger">{stopReasonError}</div>}
               </div>
             ) : (
               <div className="mb-4 text-[13px] text-text-2">
@@ -500,7 +500,7 @@ export function GenericCrudEditorPage({
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[980px] border-collapse text-sm">
                   <thead className="bg-fill-2 text-left text-text-2">
-                    <tr className="h-[42px]">
+                    <tr className="h-[44px]">
                       {["编码", "名称", "规格", "数量", "单位", "单价", "金额", "备注", "操作"].map((label) => (
                         <th key={label} className="border-b border-line-1 px-3">{label}</th>
                       ))}
@@ -633,7 +633,7 @@ export function GenericCrudDetailPage({ view }: { view: ViewKey }) {
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[980px] border-collapse text-sm">
                   <thead className="bg-fill-2 text-left text-text-2">
-                    <tr className="h-[42px]">
+                    <tr className="h-[44px]">
                       {["编码", "名称", "规格", "数量", "单位", "单价", "金额", "备注"].map((label) => (
                         <th key={label} className="border-b border-line-1 px-3">{label}</th>
                       ))}
@@ -1608,21 +1608,21 @@ function EntityStatusDialog({
   onConfirm: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="w-[420px] rounded-xl border border-line-1 bg-white p-6 shadow-xl">
+    <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/40">
+      <div className="w-[420px] rounded-xl border border-line-1 bg-white p-6 shadow-drawer">
         <div className="mb-4 text-[15px] font-semibold text-text-1">
           确认{action}：{name}
         </div>
         {action === "停用" ? (
           <div className="mb-4 space-y-1">
-            <div className="text-[13px] text-text-2">停用原因 <span className="text-red-500">*</span></div>
+            <div className="text-[13px] text-text-2">停用原因 <span className="text-danger">*</span></div>
             <TextArea
               value={stopReason}
               onChange={onStopReasonChange}
               maxLength={100}
               placeholder="请填写停用原因"
             />
-            {stopReasonError ? <div className="text-[12px] text-red-500">{stopReasonError}</div> : null}
+            {stopReasonError ? <div className="text-[12px] text-danger">{stopReasonError}</div> : null}
           </div>
         ) : (
           <div className="mb-4 text-[13px] text-text-2">启用后该{singular}可重新在新单中选择。</div>

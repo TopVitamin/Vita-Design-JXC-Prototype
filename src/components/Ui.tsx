@@ -853,7 +853,7 @@ export function DateField({ value, onChange, placeholder, className }: DateField
     <div
       ref={popoverRef}
       style={popoverStyle}
-      className="overflow-hidden rounded-lg border border-line-2 bg-white shadow-dropdown"
+      className="overflow-hidden rounded-xl border border-line-2 bg-white shadow-dropdown"
     >
           {/* 年月导航 */}
           <div className="flex items-center justify-between border-b border-line-1 px-3 py-2">
@@ -1040,7 +1040,7 @@ export function DateRangeField({ value, onChange, placeholder, className }: Date
     <div
       ref={popoverRef}
       style={popoverStyle}
-      className="overflow-hidden rounded-lg border border-line-2 bg-white shadow-dropdown"
+      className="overflow-hidden rounded-xl border border-line-2 bg-white shadow-dropdown"
     >
           {/* 当前选择提示 */}
           <div className="border-b border-line-1 px-3 py-2 text-center text-[13px] text-text-3">
@@ -1197,7 +1197,7 @@ export function TimeField({ value, onChange, placeholder, className }: TimeField
       </div>
 
       {isOpen && (
-        <div className="absolute left-0 top-full z-50 mt-1 min-w-[200px] overflow-hidden rounded-lg border border-line-2 bg-white shadow-dropdown">
+        <div className="absolute left-0 top-full z-50 mt-1 min-w-[200px] overflow-hidden rounded-xl border border-line-2 bg-white shadow-dropdown">
           {/* 时间网格 */}
           <div className="flex border-b border-line-1">
             <div className="flex-1 border-r border-line-1 p-2">
@@ -1333,7 +1333,7 @@ export function DateTimeField({ value, onChange, placeholder, className }: DateT
       </div>
 
       {isOpen && (
-        <div className="absolute left-0 top-full z-50 mt-1 min-w-[280px] overflow-hidden rounded-lg border border-line-2 bg-white shadow-dropdown">
+        <div className="absolute left-0 top-full z-50 mt-1 min-w-[280px] overflow-hidden rounded-xl border border-line-2 bg-white shadow-dropdown">
           {!showTime ? (
             <>
               {/* 年月导航 */}

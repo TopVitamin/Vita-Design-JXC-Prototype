@@ -39,7 +39,7 @@ export function Drawer({
   return createPortal(
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-drawer flex justify-end bg-[rgba(29,33,41,0.45)]"
+      className="fixed inset-0 z-drawer flex justify-end bg-black/40"
       onClick={(e) => {
         if (e.target === overlayRef.current) onClose();
       }}

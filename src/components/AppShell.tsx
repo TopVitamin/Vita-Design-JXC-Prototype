@@ -242,7 +242,7 @@ export function AppShell({
                   </button>
 
                   {activeCollapsedGroup === group.id ? (
-                    <div className="absolute left-14 top-0 z-20 w-56 overflow-hidden rounded-lg border border-line-2 bg-white shadow-dropdown">
+                    <div className="absolute left-14 top-0 z-20 w-56 overflow-hidden rounded-xl border border-line-2 bg-white shadow-dropdown">
                       <div className="border-b border-line-1 px-4 py-3 text-sm font-semibold text-text-1">
                         {group.label}
                       </div>
@@ -283,7 +283,7 @@ export function AppShell({
                       toggleGroup(group.id);
                     }}
                     className={cn(
-                      "flex h-[42px] w-full items-center justify-between rounded-md px-3 text-left text-sm transition",
+                      "flex h-[44px] w-full items-center justify-between rounded-md px-3 text-left text-sm transition",
                       inCurrentGroup
                         ? "font-medium text-brand-6"
                         : "text-text-2 hover:bg-fill-2",
@@ -315,7 +315,7 @@ export function AppShell({
                             onClick={() => onNavigate(item.key)}
                             className={cn(
                               hasChildren
-                                ? "flex h-[42px] w-full items-center rounded-md pr-3 pl-9 text-left text-sm transition"
+                                ? "flex h-[44px] w-full items-center rounded-md pr-3 pl-9 text-left text-sm transition"
                                 : "hidden",
                               active
                                 ? "bg-brand-1 font-medium text-brand-6"
@@ -342,7 +342,7 @@ export function AppShell({
           setActiveCollapsedGroup(null);
         }}
         className={cn(
-          "m-2 flex h-[42px] items-center rounded-md px-3 text-sm text-text-3 transition hover:bg-fill-2",
+          "m-2 flex h-[44px] items-center rounded-md px-3 text-sm text-text-3 transition hover:bg-fill-2",
           isSidebarCollapsed ? "justify-center" : "gap-3",
         )}
       >
@@ -476,7 +476,7 @@ export function AppShell({
             className="relative flex h-8 w-8 items-center justify-center rounded-lg text-white/80 transition hover:bg-white/10"
           >
             <Bell size={15} />
-            <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-400 ring-1 ring-white/20" />
+            <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-danger ring-1 ring-white/20" />
           </button>
           <button
             type="button"
@@ -501,7 +501,7 @@ export function AppShell({
             </button>
 
             {isProfileOpen ? (
-              <div className="absolute right-0 top-11 z-20 w-[260px] overflow-hidden rounded-lg border border-line-2 bg-white text-text-2 shadow-dropdown">
+              <div className="absolute right-0 top-11 z-20 w-[260px] overflow-hidden rounded-xl border border-line-2 bg-white text-text-2 shadow-dropdown">
                 <div className="border-b border-line-1 px-4 py-4">
                   <div className="flex items-start gap-3">
                     <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#ffcf8b] text-[15px] font-semibold text-[#7a2f00]">
@@ -581,8 +581,8 @@ export function AppShell({
         <div className="hidden lg:block">{sidebar}</div>
 
         {isSidebarOpen ? (
-          <div className="fixed inset-0 z-30 bg-black/35 lg:hidden" onClick={() => setIsSidebarOpen(false)}>
-            <div className="h-full w-[200px] bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
+          <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setIsSidebarOpen(false)}>
+            <div className="h-full w-[200px] bg-white shadow-drawer" onClick={(event) => event.stopPropagation()}>
               <div className="flex h-[54px] items-center justify-between border-b border-line-1 px-4">
                 <span className="text-sm font-semibold text-text-1">导航菜单</span>
                 <button

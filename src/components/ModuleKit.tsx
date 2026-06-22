@@ -52,7 +52,7 @@ export function ReadonlyValue({ value, className }: { value: string; className?:
 export function ConfirmModal({ state, onCancel }: { state: ConfirmState | null; onCancel: () => void }) {
   if (!state) return null;
   return (
-    <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/35 px-4">
+    <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/40 px-4">
       <div className="w-full max-w-[420px] rounded-lg border border-line-1 bg-white shadow-drawer">
         <div className="border-b border-line-1 px-5 py-4 text-[15px] font-semibold text-text-1">{state.title}</div>
         <div className="px-5 py-4 text-[14px] leading-6 text-text-2">{state.content}</div>
@@ -75,6 +75,10 @@ export function EmptyStateRow({ colSpan, text = "暂无数据" }: { colSpan: num
 
 export function TextAction({ children, onClick }: { children: string; onClick: () => void }) {
   return <button type="button" className="text-[13px] text-brand-6 transition hover:text-brand-7" onClick={onClick}>{children}</button>;
+}
+
+export function DetailValue({ label, value, className }: { label: string; value: ReactNode; className?: string }) {
+  return <div className={className}><div className="text-[13px] text-text-3">{label}</div><div className="mt-1 text-[14px] text-text-1">{value}</div></div>;
 }
 
 // ── 工具函数 ──────────────────────────────────────────────────────────────────

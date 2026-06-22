@@ -29,9 +29,9 @@ const kpiCards = [
     trend: "+3",
     trendUp: true,
     gradient: "from-sky-50 via-blue-50 to-white",
-    iconBg: "bg-blue-100",
-    iconColor: "text-blue-600",
-    trendColor: "text-blue-600",
+    iconBg: "bg-brand-1",
+    iconColor: "text-brand-6",
+    trendColor: "text-brand-6",
     icon: ShoppingCart,
     sub: "较昨日",
   },
@@ -42,9 +42,9 @@ const kpiCards = [
     trend: "2笔逾期",
     trendUp: false,
     gradient: "from-orange-50 via-amber-50 to-white",
-    iconBg: "bg-orange-100",
-    iconColor: "text-orange-600",
-    trendColor: "text-orange-600",
+    iconBg: "bg-warning/10",
+    iconColor: "text-warning",
+    trendColor: "text-warning",
     icon: Package,
     sub: "需处理",
   },
@@ -55,9 +55,9 @@ const kpiCards = [
     trend: "+12%",
     trendUp: true,
     gradient: "from-emerald-50 via-teal-50 to-white",
-    iconBg: "bg-emerald-100",
-    iconColor: "text-emerald-600",
-    trendColor: "text-emerald-600",
+    iconBg: "bg-success/10",
+    iconColor: "text-success",
+    trendColor: "text-success",
     icon: DollarSign,
     sub: "较上周同期",
   },
@@ -68,9 +68,9 @@ const kpiCards = [
     trend: "需补货",
     trendUp: false,
     gradient: "from-red-50 via-rose-50 to-white",
-    iconBg: "bg-red-100",
-    iconColor: "text-red-500",
-    trendColor: "text-red-500",
+    iconBg: "bg-danger/10",
+    iconColor: "text-danger",
+    trendColor: "text-danger",
     icon: Activity,
     sub: "SKU告警",
   },
@@ -139,10 +139,10 @@ const routeMap: Record<string, string> = {
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 const statusMap: Record<string, { label: string; tone: string }> = {
-  待审核: { label: "待审核", tone: "bg-orange-100 text-orange-700" },
-  待出库: { label: "待出库", tone: "bg-blue-100 text-blue-700" },
-  已完成: { label: "已完成", tone: "bg-emerald-100 text-emerald-700" },
-  已关闭: { label: "已关闭", tone: "bg-gray-100 text-gray-500" },
+  待审核: { label: "待审核", tone: "bg-warning/10 text-orange-700" },
+  待出库: { label: "待出库", tone: "bg-brand-1 text-blue-700" },
+  已完成: { label: "已完成", tone: "bg-success/10 text-emerald-700" },
+  已关闭: { label: "已关闭", tone: "bg-fill-2 text-gray-500" },
 };
 
 export function DashboardPage() {
@@ -288,7 +288,7 @@ export function DashboardPage() {
 
           <div className="divide-y divide-line-1">
             {salesOrders.slice(0, 5).map((order) => {
-              const status = statusMap[order.status] ?? { label: order.status, tone: "bg-gray-100 text-gray-500" };
+              const status = statusMap[order.status] ?? { label: order.status, tone: "bg-fill-2 text-gray-500" };
               return (
                 <button
                   key={order.id}

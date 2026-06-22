@@ -36,6 +36,8 @@ export default {
         success: "#00b42a",
         warning: "#ff7d00",
         danger: "#f53f3f",
+        link: "var(--brand-6)",
+        "link-hover": "var(--brand-7)",
         hover: {
           bg: "var(--hover-bg)",
         },

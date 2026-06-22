@@ -1,7 +1,7 @@
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { BatchSearchInput, Button, DateField, DateRangeField, Input, PageTitle, Pagination, ResizableHeaderCell, Select, StatusPill, TableSortHeader, TextArea, useResizableColumns } from "../components/Ui";
-import { ConfirmModal, ConfirmState, EmptyStateRow, LabeledField, ReadonlyValue, SurfaceCard, TextAction, formatMoney, inDateRange, openError, openToast, parseBatchInput } from "../components/ModuleKit";
+import { ConfirmModal, ConfirmState, DetailValue, EmptyStateRow, LabeledField, ReadonlyValue, SurfaceCard, TextAction, formatMoney, inDateRange, openError, openToast, parseBatchInput } from "../components/ModuleKit";
 import { ActionsCell, DataCell, MoneyCell, StatusCell, StickyFirstColumnCell, StickyFirstColumnHeader, StickySelectCell, SummaryFooter } from "../components/TableCells";
 import { cn } from "../utils/cn";
 import { compareRecord } from "../utils/sort";
@@ -238,7 +238,7 @@ export function SalesOrderListPage() {
         </div>
               </div>
 
-      <div className="overflow-hidden rounded-lg border border-line-1 bg-white shadow-soft">
+      <div className="overflow-hidden rounded-xl border border-line-1 bg-white shadow-soft">
         <div ref={containerRef} className="overflow-x-auto">
           <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, TABLE_MIN_WIDTH.documentSales) }}>
             <thead className="bg-fill-2 text-left text-text-2">
@@ -257,7 +257,7 @@ export function SalesOrderListPage() {
             </thead>
             <tbody>
               {pageRows.length === 0 ? <EmptyStateRow colSpan={10} /> : pageRows.map((record) => (
-                <tr key={record.id} className="group h-[44px] border-b border-line-1 text-text-2 hover:bg-hover-bg">
+                <tr key={record.id} className="group h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
                   <StickySelectCell style={getColumnStyle("__select__")} variant="body" checked={selectedIds.includes(record.id)} onChange={() => setSelectedIds((current) => current.includes(record.id) ? current.filter((id) => id !== record.id) : [...current, record.id])} />
                   <StickyFirstColumnCell bodyStyle={{ ...getColumnStyle("no"), left: getColumnStyle("__select__").width }}><button type="button" className="text-brand-6 hover:text-brand-7" onClick={() => navigate(`/sales-orders/${record.id}`)}>{record.no}</button></StickyFirstColumnCell>
                   <StatusCell style={getColumnStyle("status")} tone={record.statusTone} label={record.status} />
@@ -386,7 +386,7 @@ export function SalesStockoutListPage() {
         </div>
               </div>
 
-      <div className="overflow-hidden rounded-lg border border-line-1 bg-white shadow-soft">
+      <div className="overflow-hidden rounded-xl border border-line-1 bg-white shadow-soft">
         <div ref={containerRef} className="overflow-x-auto">
           <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, TABLE_MIN_WIDTH.documentWide) }}>
             <thead className="bg-fill-2 text-left text-text-2">
@@ -405,7 +405,7 @@ export function SalesStockoutListPage() {
             </thead>
             <tbody>
               {pageRows.length === 0 ? <EmptyStateRow colSpan={10} /> : pageRows.map((record) => (
-                <tr key={record.id} className="group h-[44px] border-b border-line-1 text-text-2 hover:bg-hover-bg">
+                <tr key={record.id} className="group h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
                   <StickySelectCell style={getColumnStyle("__select__")} variant="body" checked={selectedIds.includes(record.id)} onChange={() => setSelectedIds((current) => current.includes(record.id) ? current.filter((id) => id !== record.id) : [...current, record.id])} />
                   <StickyFirstColumnCell bodyStyle={{ ...getColumnStyle("no"), left: getColumnStyle("__select__").width }}><button type="button" className="text-brand-6 hover:text-brand-7" onClick={() => navigate(`/sales-delivery/${record.id}`)}>{record.no}</button></StickyFirstColumnCell>
                   <StatusCell style={getColumnStyle("status")} tone={record.statusTone} label={record.status} />
@@ -600,7 +600,7 @@ function SalesOrderEditorPageV2({ mode }: { mode: "create" | "edit" }) {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1620px] border-collapse text-sm">
             <thead className="bg-fill-2 text-left text-text-2">
-              <tr className="h-[42px]">{["序号", "商品", "规格型号", "单位", "可用库存", "销售数量", "单价（含税）", "税率", "折扣率", "金额（含税）", "行备注", "操作"].map((label) => <th key={label} className="border-b border-line-1 px-3">{label}</th>)}</tr>
+              <tr className="h-[44px]">{["序号", "商品", "规格型号", "单位", "可用库存", "销售数量", "单价（含税）", "税率", "折扣率", "金额（含税）", "行备注", "操作"].map((label) => <th key={label} className="border-b border-line-1 px-3">{label}</th>)}</tr>
             </thead>
             <tbody>
               {form.lines.map((line, index) => (
@@ -773,7 +773,7 @@ function SalesStockoutEditorPageV2({ mode }: { mode: "create" | "edit" }) {
       <SurfaceCard title="商品明细" extra={`本次出库 ${totalQty} 件 | 总金额 ${formatMoney(totalAmount)}`}>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1460px] border-collapse text-sm">
-            <thead className="bg-fill-2 text-left text-text-2"><tr className="h-[42px]">{["序号", "商品", "规格型号", "单位", "订单数量", "未出库数量", "本次出库数量", "单价（含税）", "出库金额", "异常备注"].map((label) => <th key={label} className="border-b border-line-1 px-3">{label}</th>)}</tr></thead>
+            <thead className="bg-fill-2 text-left text-text-2"><tr className="h-[44px]">{["序号", "商品", "规格型号", "单位", "订单数量", "未出库数量", "本次出库数量", "单价（含税）", "出库金额", "异常备注"].map((label) => <th key={label} className="border-b border-line-1 px-3">{label}</th>)}</tr></thead>
             <tbody>
               {form.lines.map((line, index) => {
                 const disabled = line.pendingQty === 0;
@@ -861,7 +861,7 @@ export function SalesOrderDetailPageV2() {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1560px] border-collapse text-sm">
             <thead className="bg-fill-2 text-left text-text-2">
-              <tr className="h-[42px]">
+              <tr className="h-[44px]">
                 {(showProgressCols
                   ? ["序号", "商品", "规格型号", "单位", "销售数量", "累计已出库数量", "未出库数量", "单价（含税）", "金额（含税）", "行备注"]
                   : ["序号", "商品", "规格型号", "单位", "销售数量", "单价（含税）", "税率", "折扣率", "金额（含税）", "行备注"]
@@ -899,7 +899,7 @@ export function SalesOrderDetailPageV2() {
         <SurfaceCard title="关联出库单">
           <div className="overflow-x-auto">
             <table className="min-w-full border-collapse text-sm">
-              <thead className="bg-fill-2 text-left text-text-2"><tr className="h-[42px]">{["出库单号", "出库日期", "本次出库数量", "确认出库人", "出库状态"].map((label) => <th key={label} className="border-b border-line-1 px-3">{label}</th>)}</tr></thead>
+              <thead className="bg-fill-2 text-left text-text-2"><tr className="h-[44px]">{["出库单号", "出库日期", "本次出库数量", "确认出库人", "出库状态"].map((label) => <th key={label} className="border-b border-line-1 px-3">{label}</th>)}</tr></thead>
               <tbody>{linkedStockouts.map((doc) => <tr key={doc.id} className="border-b border-line-1"><td className="px-3 py-2.5"><button type="button" className="text-brand-6 hover:text-brand-7" onClick={() => navigate(`/sales-delivery/${doc.id}`)}>{doc.no}</button></td><td className="px-3 py-2.5">{doc.status === "草稿" ? "-" : doc.stockoutDate}</td><td className={cn("px-3 py-2.5", doc.status === "草稿" && "text-text-3")}>{doc.totalQty}</td><td className="px-3 py-2.5">{doc.confirmBy || "-"}</td><td className="px-3 py-2.5"><StatusPill tone={doc.statusTone}>{doc.status}</StatusPill></td></tr>)}</tbody>
             </table>
           </div>
@@ -953,7 +953,7 @@ export function SalesStockoutDetailPageV2() {
       <SurfaceCard title="商品明细" extra={`本次出库 ${record.totalQty} 件 | 总金额 ${formatMoney(record.totalAmount)}`}>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1420px] border-collapse text-sm">
-            <thead className="bg-fill-2 text-left text-text-2"><tr className="h-[42px]">{["序号", "商品", "规格型号", "单位", "订单数量", "本次出库数量", "单价（含税）", "出库金额", "异常备注"].map((label) => <th key={label} className="border-b border-line-1 px-3">{label}</th>)}</tr></thead>
+            <thead className="bg-fill-2 text-left text-text-2"><tr className="h-[44px]">{["序号", "商品", "规格型号", "单位", "订单数量", "本次出库数量", "单价（含税）", "出库金额", "异常备注"].map((label) => <th key={label} className="border-b border-line-1 px-3">{label}</th>)}</tr></thead>
             <tbody>{record.lines.map((line, index) => <tr key={line.id} className="border-b border-line-1"><td className="px-3 py-2.5">{index + 1}</td><td className="px-3 py-2.5">{`${line.skuCode} ${line.skuName}`}</td><td className="px-3 py-2.5">{line.spec || "-"}</td><td className="px-3 py-2.5">{line.unit || "-"}</td><td className="px-3 py-2.5">{line.orderQty}</td><td className="px-3 py-2.5 font-medium">{line.stockoutQty}</td><td className="px-3 py-2.5">{formatMoney(line.price)}</td><td className="px-3 py-2.5">{formatMoney(line.amount)}</td><td className="px-3 py-2.5">{line.note || "-"}</td></tr>)}</tbody>
           </table>
         </div>
@@ -971,8 +971,4 @@ export function SalesStockoutDetailPageV2() {
       <ConfirmModal state={confirmState} onCancel={() => setConfirmState(null)} />
     </div>
   );
-}
-
-function DetailValue({ label, value, className }: { label: string; value: ReactNode; className?: string }) {
-  return <div className={className}><div className="text-[13px] text-text-3">{label}</div><div className="mt-1 text-[14px] text-text-1">{value}</div></div>;
 }

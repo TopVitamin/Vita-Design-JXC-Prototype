@@ -92,19 +92,19 @@ export function PayableQueryPage() {
       <div className="grid grid-cols-4 gap-4">
         <div className="rounded-lg border border-line-1 bg-white px-4 py-3">
           <div className="text-xs text-text-2">命中供应商数</div>
-          <div className="mt-1 text-xl font-semibold text-blue-600">{metrics.hitSuppliers} 位供应商</div>
+          <div className="mt-1 text-xl font-semibold text-brand-6">{metrics.hitSuppliers} 位供应商</div>
         </div>
         <div className="rounded-lg border border-line-1 bg-white px-4 py-3">
           <div className="text-xs text-text-2">应付总余额</div>
-          <div className="mt-1 text-xl font-semibold text-orange-500">¥{metrics.totalBalance.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          <div className="mt-1 text-xl font-semibold text-warning">¥{metrics.totalBalance.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
         </div>
         <div className="rounded-lg border border-line-1 bg-white px-4 py-3">
           <div className="text-xs text-text-2">即将到期（7天内）</div>
-          <div className="mt-1 text-xl font-semibold text-orange-500">¥{metrics.approachingBalance.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          <div className="mt-1 text-xl font-semibold text-warning">¥{metrics.approachingBalance.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
         </div>
         <div className="rounded-lg border border-line-1 bg-white px-4 py-3">
           <div className="text-xs text-text-2">已逾期未付款</div>
-          <div className="mt-1 text-xl font-semibold text-red-500">¥{metrics.overdueBalance.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          <div className="mt-1 text-xl font-semibold text-danger">¥{metrics.overdueBalance.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
         </div>
       </div>
 
@@ -194,7 +194,7 @@ export function PayableQueryPage() {
                   <td className="border-r border-line-1 px-4 whitespace-nowrap" style={getColumnStyle("periodStatusTag")}>
                     <StatusPill tone={periodToneMap[row.periodStatus]}>{periodStatusMap[row.periodStatus]}</StatusPill>
                   </td>
-                  <td className={cn("border-r border-line-1 px-4 text-right whitespace-nowrap font-medium", row.remainingDays < 0 ? "text-red-500" : row.remainingDays <= 7 ? "text-orange-500" : "text-text-1")} style={getColumnStyle("remainingDays")}>
+                  <td className={cn("border-r border-line-1 px-4 text-right whitespace-nowrap font-medium", row.remainingDays < 0 ? "text-danger" : row.remainingDays <= 7 ? "text-warning" : "text-text-1")} style={getColumnStyle("remainingDays")}>
                     {row.remainingDays >= 0 ? `${row.remainingDays}天` : `${row.remainingDays}天`}
                   </td>
                   <td className="border-r border-line-1 px-4 whitespace-nowrap" style={getColumnStyle("dueDate")}>{row.dueDate || "-"}</td>

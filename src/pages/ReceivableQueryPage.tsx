@@ -15,9 +15,9 @@ function AgingBar({ distribution }: { distribution: { overdue: number; overdue30
   return (
     <div className="flex items-center gap-1 w-full">
       <div className="flex flex-1 h-3 rounded-full overflow-hidden bg-fill-2 gap-[2px]">
-        {overduePct > 0 && <div className="bg-red-500 rounded-full" style={{ width: `${overduePct}%` }} />}
-        {overdue30Pct > 0 && <div className="bg-orange-400 rounded-full" style={{ width: `${overdue30Pct}%` }} />}
-        {overdue60Pct > 0 && <div className="bg-orange-300 rounded-full" style={{ width: `${overdue60Pct}%` }} />}
+        {overduePct > 0 && <div className="bg-danger rounded-full" style={{ width: `${overduePct}%` }} />}
+        {overdue30Pct > 0 && <div className="bg-warning rounded-full" style={{ width: `${overdue30Pct}%` }} />}
+        {overdue60Pct > 0 && <div className="bg-warning/60 rounded-full" style={{ width: `${overdue60Pct}%` }} />}
       </div>
       <span className="text-xs text-text-3 whitespace-nowrap">{overduePct}/{overdue30Pct}/{overdue60Pct}%</span>
     </div>
@@ -25,9 +25,9 @@ function AgingBar({ distribution }: { distribution: { overdue: number; overdue30
 }
 
 const toneClass: Record<string, string> = {
-  green: "text-green-600",
-  orange: "text-orange-500",
-  red: "text-red-500 font-semibold",
+  green: "text-success",
+  orange: "text-warning",
+  red: "text-danger font-semibold",
 };
 
 export function ReceivableQueryPage() {
@@ -105,29 +105,29 @@ export function ReceivableQueryPage() {
       <div className="grid grid-cols-4 gap-4">
         <div className="rounded-lg border border-line-1 bg-white px-4 py-3">
           <div className="text-xs text-text-2">命中客户数</div>
-          <div className="mt-1 text-xl font-semibold text-blue-600">{metrics.hitCustomers} 位客户</div>
+          <div className="mt-1 text-xl font-semibold text-brand-6">{metrics.hitCustomers} 位客户</div>
         </div>
         <div className="rounded-lg border border-line-1 bg-white px-4 py-3">
           <div className="text-xs text-text-2">应收总余额</div>
-          <div className="mt-1 text-xl font-semibold text-orange-500">¥{metrics.totalBalance.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          <div className="mt-1 text-xl font-semibold text-warning">¥{metrics.totalBalance.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
         </div>
         <div className="rounded-lg border border-line-1 bg-white px-4 py-3">
           <div className="text-xs text-text-2">逾期未回款</div>
-          <div className="mt-1 text-xl font-semibold text-red-500">¥{metrics.overdueBalance.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          <div className="mt-1 text-xl font-semibold text-danger">¥{metrics.overdueBalance.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
         </div>
         <div className="rounded-lg border border-line-1 bg-white px-4 py-3">
           <div className="text-xs text-text-2">本月已回款</div>
-          <div className="mt-1 text-xl font-semibold text-green-600">¥{metrics.thisMonthReceipt.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          <div className="mt-1 text-xl font-semibold text-success">¥{metrics.thisMonthReceipt.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
         </div>
       </div>
 
       {/* 账龄颜色说明 */}
       <div className="flex items-center gap-4 text-xs text-text-2">
         <span className="text-text-3">账龄区间：</span>
-        <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full bg-green-500"></span>未逾期（&lt;30天）</span>
-        <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full bg-orange-400"></span>逾期1-30天（30-59天）</span>
-        <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full bg-orange-300"></span>逾期31-60天（60-89天）</span>
-        <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full bg-red-500"></span>逾期60天以上（≥90天）</span>
+        <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full bg-success"></span>未逾期（&lt;30天）</span>
+        <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full bg-warning"></span>逾期1-30天（30-59天）</span>
+        <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full bg-warning/60"></span>逾期31-60天（60-89天）</span>
+        <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full bg-danger"></span>逾期60天以上（≥90天）</span>
       </div>
 
       {/* 查询区 */}
@@ -214,7 +214,7 @@ export function ReceivableQueryPage() {
                   <td className="border-r border-line-1 px-4 text-right whitespace-nowrap text-text-3" style={getColumnStyle("creditLimit")}>
                     {row.creditLimit === "0.00" ? "-" : money(parseFloat(row.creditLimit.replace(/,/g, "")))}
                   </td>
-                  <td className={cn("border-r border-line-1 px-4 text-right whitespace-nowrap", row.creditUsageRate > 80 ? "text-orange-500 font-medium" : "text-text-3")} style={getColumnStyle("creditUsageRate")}>
+                  <td className={cn("border-r border-line-1 px-4 text-right whitespace-nowrap", row.creditUsageRate > 80 ? "text-warning font-medium" : "text-text-3")} style={getColumnStyle("creditUsageRate")}>
                     {row.creditLimit === "0.00" ? "-" : `${row.creditUsageRate}%`}
                   </td>
                   <td className="border-r border-line-1 px-4 whitespace-nowrap" style={getColumnStyle("lastReceiptDate")}>{row.lastReceiptDate || "-"}</td>

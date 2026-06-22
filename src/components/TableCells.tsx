@@ -104,7 +104,7 @@ type StickySelectCellProps = {
 export function StickySelectCell({ style, variant, checked, onChange }: StickySelectCellProps) {
   const className = cn(
     "sticky left-0 z-10 border-r border-line-1 px-3",
-    variant === "header" ? "border-b bg-fill-2" : "bg-white group-hover:bg-hover-bg",
+    variant === "header" ? "border-b bg-fill-2" : "bg-white group-hover:bg-hover",
   );
   const Tag = variant === "header" ? "th" : "td";
   return (
@@ -123,7 +123,7 @@ type StickyFirstColumnCellProps = {
 
 export function StickyFirstColumnCell({ bodyStyle, children }: StickyFirstColumnCellProps) {
   return (
-    <td className="sticky z-10 border-r border-line-1 bg-white px-4 group-hover:bg-hover-bg" style={bodyStyle}>
+    <td className="sticky z-10 border-r border-line-1 bg-white px-4 group-hover:bg-hover" style={bodyStyle}>
       {children}
     </td>
   );
@@ -180,8 +180,8 @@ type SummaryFooterProps = {
 export function SummaryFooter({ colSpan, children, className, lineCount, emptyText = "暂无明细数据，请添加商品行" }: SummaryFooterProps) {
   const isEmpty = lineCount === 0;
   return (
-    <tfoot className={className ?? "bg-zinc-100"}>
-      <tr className={cn("h-[42px]", isEmpty ? "text-text-3" : "font-semibold text-text-1")}>
+    <tfoot className={className ?? "bg-fill-2"}>
+      <tr className={cn("h-[44px]", isEmpty ? "text-text-3" : "font-semibold text-text-1")}>
         <td colSpan={colSpan} className="px-4">{isEmpty ? emptyText : children}</td>
       </tr>
     </tfoot>

@@ -1,7 +1,7 @@
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { BatchSearchInput, Button, Checkbox, DateField, DateRangeField, Input, PageTitle, Pagination, ResizableHeaderCell, Select, StatusPill, TabBar, TableSortHeader, TextArea, useResizableColumns } from "../components/Ui";
-import { ConfirmModal, ConfirmState, EmptyStateRow, LabeledField, ReadonlyValue, SurfaceCard, TextAction, formatMoney, inDateRange, openError, openToast, parseBatchInput } from "../components/ModuleKit";
+import { ConfirmModal, ConfirmState, DetailValue, EmptyStateRow, LabeledField, ReadonlyValue, SurfaceCard, TextAction, formatMoney, inDateRange, openError, openToast, parseBatchInput } from "../components/ModuleKit";
 import { ActionsCell, DataCell, MoneyCell, StatusCell, StickyFirstColumnCell, StickyFirstColumnHeader, StickySelectCell, SummaryFooter } from "../components/TableCells";
 import { cn } from "../utils/cn";
 import { compareRecord } from "../utils/sort";
@@ -156,8 +156,8 @@ function ProductPickerModal({ open, maxSelectCount, selectedCodes: _selectedCode
   const reachedLimit = draftSelected.length >= maxSelectCount;
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/35 px-4">
-      <div className="flex max-h-[80vh] w-full max-w-[1100px] flex-col overflow-hidden rounded-lg border border-line-1 bg-white shadow-drawer">
+    <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/40 px-4">
+      <div className="flex max-h-[80vh] w-full max-w-[1100px] flex-col overflow-hidden rounded-xl border border-line-1 bg-white shadow-drawer">
         <div className="flex items-center justify-between border-b border-line-1 px-5 py-4">
           <div>
             <div className="text-[15px] font-semibold text-text-1">选择商品</div>
@@ -171,7 +171,7 @@ function ProductPickerModal({ open, maxSelectCount, selectedCodes: _selectedCode
         <div className="overflow-auto px-5 pb-4">
           <table className="min-w-full border-collapse text-sm">
             <thead className="bg-fill-2 text-left text-text-2">
-              <tr className="h-[42px]">
+              <tr className="h-[44px]">
                 {["选择", "商品编码", "商品名称", "商品条码", "规格型号", "单位", "默认采购价"].map((label) => (
                   <th key={label} className="border-b border-line-1 px-3">
                     {label}
@@ -417,7 +417,7 @@ export function PurchaseOrdersPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <section className="overflow-hidden rounded-lg border border-line-1 bg-white shadow-soft">
+      <section className="overflow-hidden rounded-xl border border-line-1 bg-white shadow-soft">
         <div className="bg-white px-4 pt-2.5">
           <TabBar
             variant="underline"
@@ -492,7 +492,7 @@ export function PurchaseOrdersPage() {
         </div>
               </div>
 
-      <div className="overflow-hidden rounded-lg border border-line-1 bg-white shadow-soft">
+      <div className="overflow-hidden rounded-xl border border-line-1 bg-white shadow-soft">
         <div ref={containerRef} className="overflow-x-auto">
           <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, TABLE_MIN_WIDTH.document) }}>
             <thead className="bg-fill-2 text-left text-text-2">
@@ -523,7 +523,7 @@ export function PurchaseOrdersPage() {
                 <EmptyStateRow colSpan={10} text="暂无数据" />
               ) : (
                 pageRows.map((record) => (
-                  <tr key={record.id} className="group h-[44px] border-b border-line-1 text-text-2 hover:bg-hover-bg">
+                  <tr key={record.id} className="group h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
                     <StickySelectCell style={getColumnStyle("__select__")} variant="body" checked={selectedIds.includes(record.id)} onChange={() => setSelectedIds((current) => (current.includes(record.id) ? current.filter((id) => id !== record.id) : [...current, record.id]))} />
                     <StickyFirstColumnCell bodyStyle={{ ...getColumnStyle("no"), left: getColumnStyle("__select__").width }}>
                       <button type="button" className="text-brand-6 hover:text-brand-7" onClick={() => navigate(`/purchase-orders/${record.id}`)}>
@@ -742,7 +742,7 @@ export function PurchaseReceiptPage() {
         </div>
               </div>
 
-      <div className="overflow-hidden rounded-lg border border-line-1 bg-white shadow-soft">
+      <div className="overflow-hidden rounded-xl border border-line-1 bg-white shadow-soft">
         <div ref={containerRef} className="overflow-x-auto">
           <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, TABLE_MIN_WIDTH.documentReceipt) }}>
             <thead className="bg-fill-2 text-left text-text-2">
@@ -768,7 +768,7 @@ export function PurchaseReceiptPage() {
                 <EmptyStateRow colSpan={10} text="暂无数据" />
               ) : (
                 pageRows.map((record) => (
-                  <tr key={record.id} className="group h-[44px] border-b border-line-1 text-text-2 hover:bg-hover-bg">
+                  <tr key={record.id} className="group h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
                     <StickySelectCell style={getColumnStyle("__select__")} variant="body" checked={selectedIds.includes(record.id)} onChange={() => setSelectedIds((current) => (current.includes(record.id) ? current.filter((id) => id !== record.id) : [...current, record.id]))} />
                     <StickyFirstColumnCell bodyStyle={{ ...getColumnStyle("no"), left: getColumnStyle("__select__").width }}>
                       <button type="button" className="text-brand-6 hover:text-brand-7" onClick={() => navigate(`/purchase-receipt/${record.id}`)}>
@@ -1095,7 +1095,7 @@ function PurchaseOrderEditorPage({ mode }: { mode: "create" | "edit" }) {
             选择商品
           </Button>
         </div>
-        <div className="overflow-hidden rounded-lg border border-line-1 bg-white">
+        <div className="overflow-hidden rounded-xl border border-line-1 bg-white">
           <table className="w-full table-fixed border-collapse text-sm">
             <colgroup>
               <col className="w-[60px]" />
@@ -1112,7 +1112,7 @@ function PurchaseOrderEditorPage({ mode }: { mode: "create" | "edit" }) {
               <col className="w-[88px]" />
             </colgroup>
             <thead className="bg-fill-2 text-left text-text-2">
-              <tr className="h-[42px]">
+              <tr className="h-[44px]">
                 {["序号", "商品编码", "商品名称", "商品条码", "规格型号", "单位", "采购数量", "单价（含税）", "税率", "金额（含税）", "行备注", "操作"].map((label) => (
                   <th key={label} className="border-b border-line-1 px-3 py-3 font-medium">
                     {label}
@@ -1124,7 +1124,7 @@ function PurchaseOrderEditorPage({ mode }: { mode: "create" | "edit" }) {
               {form.lines.length === 0 ? (
                 <EmptyStateRow colSpan={12} text="请先选择商品" />
               ) : form.lines.map((line, index) => (
-                <tr key={line.id} className="border-b border-line-1 align-top transition hover:bg-slate-50/70">
+                <tr key={line.id} className="border-b border-line-1 align-top transition hover:bg-fill-2/70">
                   <td className="px-3 py-2.5 text-text-2">{index + 1}</td>
                   <td className="px-3 py-2.5">
                     <ReadonlyValue value={line.skuCode || "-"} />
@@ -1191,7 +1191,7 @@ function PurchaseOrderEditorPage({ mode }: { mode: "create" | "edit" }) {
                 </tr>
               ))}
             </tbody>
-            <tfoot className="bg-slate-50">
+            <tfoot className="bg-fill-2">
               <OrderSummaryFooter
                 skuCount={summary.skuCount}
                 totalQty={summary.totalQty}
@@ -1489,7 +1489,7 @@ function PurchaseReceiptEditorPage({ mode }: { mode: "create" | "edit" }) {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1520px] border-collapse text-sm">
             <thead className="bg-fill-2 text-left text-text-2">
-              <tr className="h-[42px]">
+              <tr className="h-[44px]">
                 {["序号", "商品", "规格型号", "单位", "订单数量", "本次实收数量", "本次入库数量", "差异数量", "差异原因", "异常说明", "入库单价", "入库金额"].map((label) => (
                   <th key={label} className="border-b border-line-1 px-3">
                     {label}
@@ -1688,7 +1688,7 @@ export function PurchaseOrderDetailPage() {
       </SurfaceCard>
 
       <SurfaceCard title="商品明细">
-        <div className="overflow-hidden rounded-lg border border-line-1 bg-white">
+        <div className="overflow-hidden rounded-xl border border-line-1 bg-white">
           <table className="w-full table-fixed border-collapse text-sm">
             <colgroup>
               <col className="w-[60px]" />
@@ -1706,7 +1706,7 @@ export function PurchaseOrderDetailPage() {
               <col className="w-[180px]" />
             </colgroup>
             <thead className="bg-fill-2 text-left text-text-2">
-              <tr className="h-[42px]">
+              <tr className="h-[44px]">
                 {getOrderDetailColumns(record.status).map((label) => (
                   <th key={label} className="border-b border-line-1 px-3 py-3 font-medium">
                     {label}
@@ -1716,7 +1716,7 @@ export function PurchaseOrderDetailPage() {
             </thead>
             <tbody>
               {record.lines.map((line, index) => (
-                <tr key={line.id} className="border-b border-line-1 align-top transition hover:bg-slate-50/70">
+                <tr key={line.id} className="border-b border-line-1 align-top transition hover:bg-fill-2/70">
                   <td className="px-3 py-2.5">{index + 1}</td>
                   <td className="px-3 py-2.5">{line.skuCode || "-"}</td>
                   <td className="px-3 py-2.5">{line.skuName || "-"}</td>
@@ -1735,7 +1735,7 @@ export function PurchaseOrderDetailPage() {
                 </tr>
               ))}
             </tbody>
-            <tfoot className="bg-slate-50">
+            <tfoot className="bg-fill-2">
               <OrderSummaryFooter
                 skuCount={summary.skuCount}
                 totalQty={summary.totalQty}
@@ -1755,7 +1755,7 @@ export function PurchaseOrderDetailPage() {
           {receiptRecords.length === 0 ? (
             <div className="text-[13px] text-text-3">审核通过后可查看关联入库单</div>
           ) : (
-            <div className="overflow-hidden rounded-lg border border-line-1 bg-white">
+            <div className="overflow-hidden rounded-xl border border-line-1 bg-white">
               <table className="w-full table-fixed border-collapse text-sm">
                 <colgroup>
                   <col className="w-[220px]" />
@@ -1765,7 +1765,7 @@ export function PurchaseOrderDetailPage() {
                   <col className="w-[120px]" />
                 </colgroup>
                 <thead className="bg-fill-2 text-left text-text-2">
-                  <tr className="h-[42px]">
+                  <tr className="h-[44px]">
                     {["入库单号", "入库日期", "本次入库数量", "操作人", "状态"].map((label) => (
                       <th key={label} className="border-b border-line-1 px-3 py-3 font-medium">
                         {label}
@@ -1775,7 +1775,7 @@ export function PurchaseOrderDetailPage() {
                 </thead>
                 <tbody>
                   {receiptRecords.map((receipt) => (
-                    <tr key={receipt.id} className="border-b border-line-1 transition hover:bg-slate-50/70">
+                    <tr key={receipt.id} className="border-b border-line-1 transition hover:bg-fill-2/70">
                       <td className="px-3 py-2.5">
                         <button type="button" className="text-brand-6 hover:text-brand-7" onClick={() => navigate(`/purchase-receipt/${receipt.id}`)}>
                           {receipt.no}
@@ -1930,7 +1930,7 @@ export function PurchaseReceiptDetailPage() {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1500px] border-collapse text-sm">
             <thead className="bg-fill-2 text-left text-text-2">
-              <tr className="h-[42px]">
+              <tr className="h-[44px]">
                 {["序号", "商品", "规格型号", "单位", "订单数量", "本次实收数量", "本次入库数量", "差异数量", "差异原因", "异常说明", "入库单价", "入库金额"].map((label) => (
                   <th key={label} className="border-b border-line-1 px-3">
                     {label}
@@ -1977,19 +1977,3 @@ export function PurchaseReceiptDetailPage() {
   );
 }
 
-function DetailValue({
-  label,
-  value,
-  className,
-}: {
-  label: string;
-  value: ReactNode;
-  className?: string;
-}) {
-  return (
-    <div className={className}>
-      <div className="text-[13px] text-text-3">{label}</div>
-      <div className="mt-1 text-[14px] text-text-1">{value}</div>
-    </div>
-  );
-}
