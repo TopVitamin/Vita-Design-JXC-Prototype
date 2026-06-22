@@ -121,7 +121,7 @@ function getCrudListRouteElement(view: ViewKey) {
     case "stock-loss":
       return <StockLossPage key={view} />;
     default:
-      return <GenericCrudListPage key={view} view={view as any} />;
+      return <GenericCrudListPage key={view} view={view} />;
   }
 }
 

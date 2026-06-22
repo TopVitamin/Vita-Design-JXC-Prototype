@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { TABLE_MIN_WIDTH } from "../utils/tableConstants";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Button, Checkbox, DateField, FilterActions, FilterField, FormField, HintBox, Input, Message, PageTitle, Pagination, ResizableHeaderCell, SearchInput, Select, StatusPill, TextArea, useResizableColumns } from "../components/Ui";
+import { ActionsCell, DataCell, StatusCell } from "../components/TableCells";
 import {
   confirmPaymentRecord,
   createPaymentDraft,
@@ -138,26 +139,24 @@ export function PaymentManagementListPage() {
             <tbody>
               {paginatedRows.map((r) => (
                 <tr key={r.id} className="h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
-                  <td className="border-r border-line-1 px-4 whitespace-nowrap text-link" style={getColumnStyle("paymentNo")}><div className="overflow-hidden text-ellipsis cursor-pointer" onClick={() => navigate(`/payment-management/${r.id}`)}>{r.paymentNo}</div></td>
-                  <td className="border-r border-line-1 px-4 whitespace-nowrap" style={getColumnStyle("status")}><StatusPill tone={r.statusTone}>{r.status}</StatusPill></td>
-                  <td className="border-r border-line-1 px-4 whitespace-nowrap" style={getColumnStyle("periodStatus")}><StatusPill tone={periodToneMap[r.periodStatus]}>{periodStatusMap[r.periodStatus]}</StatusPill></td>
-                  <td className="border-r border-line-1 px-4 whitespace-nowrap" style={getColumnStyle("supplier")} title={r.supplierName}><div className="overflow-hidden text-ellipsis">{r.supplierName}</div></td>
-                  <td className="border-r border-line-1 px-4 whitespace-nowrap" style={getColumnStyle("paymentDate")}>{r.paymentDate}</td>
-                  <td className="border-r border-line-1 px-4 whitespace-nowrap" style={getColumnStyle("paymentMethod")}>{r.paymentMethod}</td>
-                  <td className="border-r border-line-1 px-4 text-right whitespace-nowrap font-medium text-text-1" style={getColumnStyle("paymentAmount")}>{moneyText(parseAmount(r.paymentAmount))}</td>
-                  <td className="border-r border-line-1 px-4 whitespace-nowrap" style={getColumnStyle("updatedAt")}>{r.updatedAt}</td>
-                  <td className="px-4 whitespace-nowrap text-center" style={getColumnStyle("__actions__")}>
-                    <div className="flex items-center justify-center gap-2">
-                      <button className="text-link hover:text-link-hover" onClick={() => navigate(`/payment-management/${r.id}`)}>查看</button>
-                      {r.status === "草稿" ? (
-                        <>
-                          <button className="text-link hover:text-link-hover" onClick={() => navigate(`/payment-management/${r.id}/edit`)}>编辑</button>
-                          <button className="text-link hover:text-link-hover text-blue-600" onClick={() => { confirmPaymentRecord(r.id); Message.success("付款已确认"); setCurrentPage(1); }}>确认付款</button>
-                          <button className="text-link hover:text-link-hover text-red-500" onClick={() => { deletePaymentRecord(r.id); Message.success("付款单已删除"); setCurrentPage(1); }}>删除</button>
-                        </>
-                      ) : null}
-                    </div>
-                  </td>
+                  <DataCell style={getColumnStyle("paymentNo")} nowrap className="text-link"><div className="overflow-hidden text-ellipsis cursor-pointer" onClick={() => navigate(`/payment-management/${r.id}`)}>{r.paymentNo}</div></DataCell>
+                  <StatusCell style={getColumnStyle("status")} nowrap tone={r.statusTone} label={r.status} />
+                  <StatusCell style={getColumnStyle("periodStatus")} nowrap tone={periodToneMap[r.periodStatus]} label={periodStatusMap[r.periodStatus]} />
+                  <DataCell style={getColumnStyle("supplier")} nowrap truncate title={r.supplierName}>{r.supplierName}</DataCell>
+                  <DataCell style={getColumnStyle("paymentDate")} nowrap>{r.paymentDate}</DataCell>
+                  <DataCell style={getColumnStyle("paymentMethod")} nowrap>{r.paymentMethod}</DataCell>
+                  <DataCell style={getColumnStyle("paymentAmount")} align="right" nowrap emphasis>{moneyText(parseAmount(r.paymentAmount))}</DataCell>
+                  <DataCell style={getColumnStyle("updatedAt")} nowrap>{r.updatedAt}</DataCell>
+                  <ActionsCell style={getColumnStyle("__actions__")} nowrap>
+                    <button className="text-link hover:text-link-hover" onClick={() => navigate(`/payment-management/${r.id}`)}>查看</button>
+                    {r.status === "草稿" ? (
+                      <>
+                        <button className="text-link hover:text-link-hover" onClick={() => navigate(`/payment-management/${r.id}/edit`)}>编辑</button>
+                        <button className="text-link hover:text-link-hover text-blue-600" onClick={() => { confirmPaymentRecord(r.id); Message.success("付款已确认"); setCurrentPage(1); }}>确认付款</button>
+                        <button className="text-link hover:text-link-hover text-red-500" onClick={() => { deletePaymentRecord(r.id); Message.success("付款单已删除"); setCurrentPage(1); }}>删除</button>
+                      </>
+                    ) : null}
+                  </ActionsCell>
                 </tr>
               ))}
             </tbody>
