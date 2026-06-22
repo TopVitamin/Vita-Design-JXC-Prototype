@@ -1,4 +1,4 @@
-import { getSalesStockout, getSalesStockouts, type SalesStockoutLine } from "./salesWorkspace";
+import { getSalesStockout, getSalesStockouts } from "./salesWorkspace";
 
 export type SalesReturnTone = "green" | "blue" | "orange" | "red" | "gray";
 export type SalesReturnStatus = "草稿" | "待审核" | "待入库" | "部分入库" | "已完成" | "已作废";

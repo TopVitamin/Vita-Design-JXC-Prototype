@@ -155,16 +155,6 @@ export function useResizableColumns(tableId: string, columns: ResizableColumnCon
     return widths[columnKey] ?? fallbackWidth ?? (targetColumn ? resolveDefaultWidth(targetColumn) : 140);
   }, [widths]);
 
-  const getColumnStyle = useCallback((columnKey: string) => {
-    const targetColumn = columnsRef.current.find((column) => column.key === columnKey);
-    const width = getColumnWidth(columnKey, targetColumn?.width);
-    return {
-      width,
-      minWidth: targetColumn?.minWidth ?? width,
-      maxWidth: targetColumn?.maxWidth,
-    } as const;
-  }, [getColumnWidth]);
-
   const effectiveWidths = useMemo(() => {
     const baseWidths = columns.reduce<Record<string, number>>((acc, column) => {
       acc[column.key] = getColumnWidth(column.key, column.width);
@@ -422,10 +412,8 @@ export function BatchSearchInput({
   const [popoverStyle, setPopoverStyle] = useState<CSSProperties>({});
 
   useEffect(() => {
-    if (!isOpen) {
-      setDraft(value);
-    }
-  }, [value, isOpen]);
+    setDraft(value);
+  }, [value]);
 
   const updatePopoverPosition = useCallback(() => {
     const el = triggerRef.current;
@@ -2201,7 +2189,6 @@ export function useMessage() {
 }
 
 // 全局消息列表
-let messageList: MessageInstance[] = [];
 let messageCount = 0;
 let setMessageListFn: React.Dispatch<React.SetStateAction<MessageInstance[]>> | null = null;
 
@@ -2273,10 +2260,6 @@ export function MessageContainer() {
   const [list, setList] = useState<MessageInstance[]>([]);
 
   useEffect(() => {
-    messageList = list;
-  }, [list]);
-
-  useEffect(() => {
     setMessageListFn = setList;
     return () => {
       setMessageListFn = null;
@@ -2339,9 +2322,8 @@ function MessageItem({ msg, onRemove }: { msg: MessageInstance; onRemove: () => 
   return (
     <div
       className={cn(
-        "pointer-events-auto flex min-w-[280px] max-w-[520px] items-center gap-3 rounded-xl border border-line-1 bg-white px-4 py-3 text-text-1 shadow-soft",
+        "pointer-events-auto flex min-w-[280px] max-w-[520px] items-center gap-3 rounded-xl border border-line-1 bg-white px-4 py-3 text-text-1 shadow-soft animate-fade-up",
       )}
-      style={{ animation: "fadeUp 0.3s ease-out" }}
     >
       <span className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-full", config.iconWrap)}>
         {config.icon}

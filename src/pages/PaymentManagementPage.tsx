@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { TABLE_MIN_WIDTH } from "../utils/tableConstants";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Button, Checkbox, DateField, FilterActions, FilterField, FormField, HintBox, Input, Message, PageTitle, Pagination, ResizableHeaderCell, SearchInput, Select, StatusPill, TextArea, useResizableColumns } from "../components/Ui";
 import {
@@ -112,7 +113,7 @@ export function PaymentManagementListPage() {
 
       <div className="overflow-hidden rounded-xl border border-line-1 shadow-soft">
         <div ref={containerRef} className="overflow-x-auto">
-          <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, 1100) }}>
+          <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, TABLE_MIN_WIDTH.standard) }}>
             <thead className="bg-fill-2 text-left text-text-2">
               <tr className="h-[44px]">
                 {["paymentNo", "status", "periodStatus", "supplier", "paymentDate", "paymentMethod", "paymentAmount", "updatedAt"].map((key) => (
@@ -235,7 +236,16 @@ export function PaymentManagementFormPage({ mode }: { mode: "create" | "edit" })
 
   return (
     <div className="flex flex-col gap-4">
-      <PageTitle title={mode === "create" ? "新增付款单" : `编辑付款单 ${draft?.paymentNo || ""}`} />
+      <PageTitle
+        title={mode === "create" ? "新增付款单" : `编辑付款单 ${draft?.paymentNo || ""}`}
+        actions={
+          <>
+            <Button onClick={() => navigate("/payment-management")}>返回列表</Button>
+            <Button tone="primary" onClick={() => handlePersist("draft")}>保存草稿</Button>
+            <Button tone="primary" onClick={() => handlePersist("confirm")}>确认付款</Button>
+          </>
+        }
+      />
 
       <HintBox>不关联入库单时，系统自动将本单标记为「暂挂款」</HintBox>
 
@@ -258,19 +268,19 @@ export function PaymentManagementFormPage({ mode }: { mode: "create" | "edit" })
             {errors.paymentMethod ? <div className="mt-1 text-xs text-danger">{errors.paymentMethod}</div> : null}
           </FormField>
           <FormField label="付款金额" required>
-            <Input value={form.paymentAmount} onChange={(v) => updateField("paymentAmount", v)} placeholder="0.00" />
+            <Input value={form.paymentAmount} onChange={(v) => updateField("paymentAmount", v.replace(/[^\d.]/g, "").replace(/^(\d*\.\d{0,2}).*$/, "$1"))} placeholder="0.00" maxLength={15} />
             {errors.paymentAmount ? <div className="mt-1 text-xs text-danger">{errors.paymentAmount}</div> : null}
           </FormField>
           <FormField label="付款账户">
-            <Input value={form.paymentAccount} onChange={(v) => updateField("paymentAccount", v)} placeholder="如：工商银行 6222xxxx·深圳分行（选填）" />
+            <Input value={form.paymentAccount} onChange={(v) => updateField("paymentAccount", v)} placeholder="如：工商银行 6222xxxx·深圳分行（选填）" maxLength={100} />
           </FormField>
           <FormField label="供应商收款账户">
-            <Input value={form.supplierReceiveAccount} onChange={(v) => updateField("supplierReceiveAccount", v)} placeholder="如：建设银行 6217xxxx（选填）" />
+            <Input value={form.supplierReceiveAccount} onChange={(v) => updateField("supplierReceiveAccount", v)} placeholder="如：建设银行 6217xxxx（选填）" maxLength={100} />
           </FormField>
         </div>
         <div className="px-6 pb-6">
           <FormField label="摘要/备注">
-            <TextArea value={form.note} onChange={(v) => updateField("note", v)} placeholder="如：11月货款、预付定金（选填）" />
+            <TextArea value={form.note} onChange={(v) => updateField("note", v)} placeholder="如：11月货款、预付定金（选填）" maxLength={200} />
           </FormField>
         </div>
       </div>
@@ -310,12 +320,6 @@ export function PaymentManagementFormPage({ mode }: { mode: "create" | "edit" })
           <div className="text-sm text-text-2">付款差额<span className={`ml-2 font-medium ${paymentPreview.stats.differenceTone === "blue" ? "text-blue-600" : paymentPreview.stats.differenceTone === "orange" ? "text-orange-500" : "text-green-600"}`}>{paymentPreview.stats.difference}</span></div>
         </div>
       </div>
-
-      <div className="flex gap-3 border-t border-line-1 pt-4">
-        <Button tone="primary" onClick={() => handlePersist("draft")}>保存草稿</Button>
-        <Button tone="primary" onClick={() => handlePersist("confirm")}>确认付款</Button>
-        <Button onClick={() => navigate("/payment-management")}>返回列表</Button>
-      </div>
     </div>
   );
 }
@@ -329,7 +333,25 @@ export function PaymentManagementDetailPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageTitle title="付款单详情">查看付款单 {record.paymentNo} 的详细信息</PageTitle>
+      <PageTitle
+        title="付款单详情"
+        actions={
+          <>
+            <Button onClick={() => navigate("/payment-management")}>返回列表</Button>
+            {record.status === "草稿" ? (
+              <>
+                <Button onClick={() => navigate(`/payment-management/${record.id}/edit`)}>编辑</Button>
+                <Button tone="primary" onClick={() => { confirmPaymentRecord(record.id); Message.success("付款已确认，供应商应付余额已更新"); navigate(`/payment-management/${record.id}`); }}>确认付款</Button>
+                <Button onClick={() => { voidPaymentRecord(record.id); Message.success("付款单已作废"); navigate(`/payment-management/${record.id}`); }}>作废</Button>
+                <Button onClick={() => { deletePaymentRecord(record.id); Message.success("付款单已删除"); navigate("/payment-management"); }}>删除</Button>
+              </>
+            ) : null}
+            <Button onClick={() => Message.success("导出成功")}>导出</Button>
+          </>
+        }
+      >
+        查看付款单 {record.paymentNo} 的详细信息
+      </PageTitle>
 
       <div className="rounded-xl border border-line-1 bg-white">
         <div className="border-b border-line-1 px-6 py-3 text-sm font-medium text-text-1">基本信息</div>
@@ -370,19 +392,6 @@ export function PaymentManagementDetailPage() {
           <div><span className="text-text-2">最后修改人</span><div className="mt-1">{record.lastModifier || "-"}</div></div>
           <div><span className="text-text-2">最后修改时间</span><div className="mt-1">{record.updatedAt}</div></div>
         </div>
-      </div>
-
-      <div className="flex gap-3 border-t border-line-1 pt-4">
-        <Button onClick={() => navigate("/payment-management")}>返回列表</Button>
-        {record.status === "草稿" ? (
-          <>
-            <Button onClick={() => navigate(`/payment-management/${record.id}/edit`)}>编辑</Button>
-            <Button tone="primary" onClick={() => { confirmPaymentRecord(record.id); Message.success("付款已确认，供应商应付余额已更新"); navigate(`/payment-management/${record.id}`); }}>确认付款</Button>
-            <Button onClick={() => { voidPaymentRecord(record.id); Message.success("付款单已作废"); navigate(`/payment-management/${record.id}`); }}>作废</Button>
-            <Button onClick={() => { deletePaymentRecord(record.id); Message.success("付款单已删除"); navigate("/payment-management"); }}>删除</Button>
-          </>
-        ) : null}
-        <Button onClick={() => Message.success("导出成功")}>导出</Button>
       </div>
     </div>
   );

@@ -37,7 +37,10 @@ export const stockLossModuleDefinition: CrudModuleDefinition = buildDocumentModu
       paymentMethod: "无需付款",
       remark: "设备包装破损，申请报损。",
       internalNote: "等待主管审核。",
-      lines: buildLines("BS"),
+      lines: buildLines("BS").map((line, index) => ({
+        ...line,
+        reason: ["包装破损", "过期", "质量问题", "丢失", "其他"][index % 5],
+      })),
       timeline: buildTimeline("报损管理", "报损单", "待主管审核"),
       logs: buildLogs("报损单"),
       relations: buildRelations("BS"),
@@ -54,7 +57,7 @@ export const stockLossModuleDefinition: CrudModuleDefinition = buildDocumentModu
         { key: "warehouse", label: "责任区域", type: "input" },
         { key: "handler", label: "负责人", type: "input" },
         { key: "settlement", label: "报损类型", type: "select", options: ["异常报损", "自然损耗"] },
-        { key: "paymentMethod", label: "处理方式", type: "select", options: ["无需付款"] },
+        { key: "paymentMethod", label: "处理方式", type: "select", options: ["无需付款", "供应商索赔", "保险理赔"] },
       ],
     },
     {

@@ -1,7 +1,6 @@
 import {
   getPurchaseReceipt,
   getPurchaseReceipts,
-  type PurchaseReceiptLine,
 } from "./purchaseWorkspace";
 
 export type ReturnTone = "green" | "blue" | "orange" | "red" | "gray";

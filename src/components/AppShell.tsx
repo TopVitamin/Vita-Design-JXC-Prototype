@@ -19,7 +19,6 @@ import {
   Settings2,
   ShoppingCart,
   Sparkles,
-  Store,
   Truck,
   UserRound,
   X,
@@ -43,7 +42,6 @@ export function AppShell({
   currentView,
   currentSectionLabel,
   currentPageLabel,
-  currentDescription,
   navigationGroups,
   onNavigate,
   children,
@@ -194,7 +192,6 @@ export function AppShell({
     dashboard: Package,
     "master-data": Package,
     sales: ShoppingCart,
-    retail: Store,
     purchase: Truck,
     stock: Boxes,
     finance: ReceiptText,
@@ -358,7 +355,7 @@ export function AppShell({
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-fill-2 text-text-1">
       <header className="relative z-50 flex h-[58px] items-center justify-between px-4 lg:px-5" style={{
-        background: "linear-gradient(135deg, #1a4fc8 0%, #165dff 55%, #3a7fff 100%)",
+        background: "linear-gradient(135deg, #1a4fc8 0%, var(--brand-6) 55%, #3a7fff 100%)",
         boxShadow: "0 1px 0 rgba(255,255,255,0.1), 0 4px 20px rgba(22,93,255,0.35)",
       }}>
         {/* Noise texture overlay */}

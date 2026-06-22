@@ -68,7 +68,7 @@ import {
   SalesReturnInboundListPage,
   SalesReturnListPage,
 } from "../pages/SalesReturnModulePages";
-import { allViews, getPageMeta } from "./navigation";
+import { allViews, getPageMeta, type ViewKey } from "./navigation";
 
 const explicitViews = new Set([
   "dashboard",
@@ -98,7 +98,7 @@ const explicitViews = new Set([
 
 const customCrudViews = new Set(["purchase-orders", "purchase-receipt", "purchase-return", "sales-delivery"]);
 
-function getCrudListRouteElement(view: string) {
+function getCrudListRouteElement(view: ViewKey) {
   switch (view) {
     case "product-management":
       return <ProductManagementPage key={view} />;
@@ -125,12 +125,12 @@ function getCrudListRouteElement(view: string) {
   }
 }
 
-function getQueryRouteElement(view: string) {
+function getQueryRouteElement(view: ViewKey) {
   switch (view) {
     case "sales-query":
       return <SalesQueryPage key={view} />;
     default:
-      return <GenericQueryPage key={view} view={view as any} />;
+      return <GenericQueryPage key={view} view={view} />;
   }
 }
 

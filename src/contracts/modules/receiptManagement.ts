@@ -1,7 +1,12 @@
 import type { CrudModuleDefinition } from "../types";
-import { buildDocumentModule, buildLines, buildLogs, buildTimeline, money } from "./shared";
+import { buildDocumentModule, money } from "./shared";
 import { receiptRecords } from "../../mocks/receipts";
 
+/**
+ * 注意：此 CrudModuleDefinition 当前未被路由消费（收款登记的实际页面是
+ * src/pages/ReceiptManagementPage.tsx，独立实现）。本文件作为字段设计预留
+ * 定义保留，便于将来把收款登记收敛进 GenericCrud 体系时复用。
+ */
 export const receiptManagementModuleDefinition: CrudModuleDefinition = buildDocumentModule({
   view: "receipt-management",
   title: "收款单",

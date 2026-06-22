@@ -1,5 +1,7 @@
-import { Button, FilterActions, FilterField, ResizableHeaderCell, SearchInput, Select, StatusPill, useResizableColumns } from "../components/Ui";
-import { ledgerRecords } from "../mocks/ledger";
+import { Button, FilterActions, FilterField, ResizableHeaderCell, SearchInput, Select, useResizableColumns } from "../components/Ui";
+import { TABLE_MIN_WIDTH } from "../utils/tableConstants";
+import { DataCell, StatusCell } from "../components/TableCells";
+import { ledgerRecords } from "../data/mock";
 
 export function CustomerLedgerPage() {
   const ledgerColumns = [
@@ -40,7 +42,7 @@ export function CustomerLedgerPage() {
       <div className="flex flex-col gap-3">
         <div className="overflow-hidden rounded-xl border border-line-1 shadow-soft">
           <div ref={containerRef} className="overflow-x-auto">
-            <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, 1100) }}>
+            <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, TABLE_MIN_WIDTH.standard) }}>
               <thead className="bg-fill-2 text-left text-text-2">
                 <tr className="h-[44px]">
                   <ResizableHeaderCell width={getColumnStyle("customer").width} minWidth={getColumnStyle("customer").minWidth} onResizeStart={(clientX) => startResize("customer", clientX)}>客户名称</ResizableHeaderCell>
@@ -56,16 +58,14 @@ export function CustomerLedgerPage() {
               <tbody>
                 {ledgerRecords.map((record) => (
                   <tr key={record.id} className="h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
-                    <td className="border-r border-line-1 px-4 whitespace-nowrap" style={getColumnStyle("customer")}>{record.customer}</td>
-                    <td className="border-r border-line-1 px-4 whitespace-nowrap" style={getColumnStyle("documentType")}>{record.documentType}</td>
-                    <td className="border-r border-line-1 px-4 text-brand-6 whitespace-nowrap" style={getColumnStyle("documentNo")}>{record.documentNo}</td>
-                    <td className="border-r border-line-1 px-4 whitespace-nowrap" style={getColumnStyle("receivable")}>{record.receivable}</td>
-                    <td className="border-r border-line-1 px-4 whitespace-nowrap" style={getColumnStyle("paid")}>{record.paid}</td>
-                    <td className="border-r border-line-1 px-4 font-medium text-text-1 whitespace-nowrap" style={getColumnStyle("balance")}>{record.balance}</td>
-                    <td className="border-r border-line-1 px-4 whitespace-nowrap" style={getColumnStyle("dueDate")}>{record.dueDate}</td>
-                    <td className="px-4 whitespace-nowrap" style={getColumnStyle("status")}>
-                      <StatusPill tone={record.tone}>{record.status}</StatusPill>
-                    </td>
+                    <DataCell style={getColumnStyle("customer")} nowrap>{record.customer}</DataCell>
+                    <DataCell style={getColumnStyle("documentType")} nowrap>{record.documentType}</DataCell>
+                    <DataCell style={getColumnStyle("documentNo")} nowrap link>{record.documentNo}</DataCell>
+                    <DataCell style={getColumnStyle("receivable")} nowrap>{record.receivable}</DataCell>
+                    <DataCell style={getColumnStyle("paid")} nowrap>{record.paid}</DataCell>
+                    <DataCell style={getColumnStyle("balance")} nowrap emphasis>{record.balance}</DataCell>
+                    <DataCell style={getColumnStyle("dueDate")} nowrap>{record.dueDate}</DataCell>
+                    <StatusCell style={getColumnStyle("status")} nowrap isLast tone={record.tone} label={record.status} />
                   </tr>
                 ))}
               </tbody>

@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
+import { TABLE_MIN_WIDTH } from "../utils/tableConstants";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Button, Checkbox, FilterActions, FilterField, FormField, HintBox, Input, Message, PageTitle, Pagination, ResizableHeaderCell, SearchInput, Select, StatusPill, TextArea, useResizableColumns } from "../components/Ui";
+import { DataCell, StatusCell } from "../components/TableCells";
 import {
   confirmReceiptRecord,
   createReceiptDraft,
@@ -24,12 +26,6 @@ function parseAmount(value: string) {
 
 function moneyText(value: number) {
   return `¥${value.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-function statusTone(status: "草稿" | "已确认" | "已作废") {
-  if (status === "已确认") return "green";
-  if (status === "已作废") return "red";
-  return "gray";
 }
 
 export function ReceiptManagementListPage() {
@@ -113,7 +109,7 @@ export function ReceiptManagementListPage() {
 
       <div className="overflow-hidden rounded-xl border border-line-1 shadow-soft">
         <div ref={containerRef} className="overflow-x-auto">
-          <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, 1100) }}>
+          <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, TABLE_MIN_WIDTH.standard) }}>
             <thead className="bg-fill-2 text-left text-text-2">
               <tr className="h-[44px]">
                 {["receiptNo", "status", "isHeld", "customer", "receiptDate", "receiptMethod", "receiptAmount", "updatedAt"].map((key) => (
@@ -138,15 +134,15 @@ export function ReceiptManagementListPage() {
             <tbody>
               {paginatedRows.map((r) => (
                 <tr key={r.id} className="h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
-                  <td className="border-r border-line-1 px-4 whitespace-nowrap text-link" style={getColumnStyle("receiptNo")}><div className="overflow-hidden text-ellipsis cursor-pointer" onClick={() => navigate(`/receipt-management/${r.id}`)}>{r.receiptNo}</div></td>
-                  <td className="border-r border-line-1 px-4 whitespace-nowrap" style={getColumnStyle("status")}><StatusPill tone={r.statusTone}>{r.status}</StatusPill></td>
-                  <td className="border-r border-line-1 px-4 whitespace-nowrap" style={getColumnStyle("isHeld")}>{r.isHeld ? <StatusPill tone={r.heldTone || "gray"}>{r.heldTone === "orange" ? "暂挂款" : "已认款"}</StatusPill> : "-"}</td>
-                  <td className="border-r border-line-1 px-4 whitespace-nowrap" style={getColumnStyle("customer")} title={r.customerName}><div className="overflow-hidden text-ellipsis">{r.customerName}</div></td>
-                  <td className="border-r border-line-1 px-4 whitespace-nowrap" style={getColumnStyle("receiptDate")}>{r.receiptDate}</td>
-                  <td className="border-r border-line-1 px-4 whitespace-nowrap" style={getColumnStyle("receiptMethod")}>{r.receiptMethod}</td>
-                  <td className="border-r border-line-1 px-4 text-right whitespace-nowrap font-medium text-text-1" style={getColumnStyle("receiptAmount")}>{moneyText(parseAmount(r.receiptAmount))}</td>
-                  <td className="border-r border-line-1 px-4 whitespace-nowrap" style={getColumnStyle("updatedAt")}>{r.updatedAt}</td>
-                  <td className="px-4 whitespace-nowrap text-center" style={getColumnStyle("__actions__")}>
+                  <DataCell style={getColumnStyle("receiptNo")} nowrap className="text-link"><div className="overflow-hidden text-ellipsis cursor-pointer" onClick={() => navigate(`/receipt-management/${r.id}`)}>{r.receiptNo}</div></DataCell>
+                  <StatusCell style={getColumnStyle("status")} nowrap tone={r.statusTone} label={r.status} />
+                  <DataCell style={getColumnStyle("isHeld")} nowrap>{r.isHeld ? <StatusPill tone={r.heldTone || "gray"}>{r.heldTone === "orange" ? "暂挂款" : "已认款"}</StatusPill> : "-"}</DataCell>
+                  <DataCell style={getColumnStyle("customer")} nowrap truncate title={r.customerName}>{r.customerName}</DataCell>
+                  <DataCell style={getColumnStyle("receiptDate")} nowrap>{r.receiptDate}</DataCell>
+                  <DataCell style={getColumnStyle("receiptMethod")} nowrap>{r.receiptMethod}</DataCell>
+                  <DataCell style={getColumnStyle("receiptAmount")} align="right" nowrap emphasis>{moneyText(parseAmount(r.receiptAmount))}</DataCell>
+                  <DataCell style={getColumnStyle("updatedAt")} nowrap>{r.updatedAt}</DataCell>
+                  <DataCell style={getColumnStyle("__actions__")} nowrap isLast className="text-center">
                     <div className="flex items-center justify-center gap-2">
                       <button className="text-link hover:text-link-hover" onClick={() => navigate(`/receipt-management/${r.id}`)}>查看</button>
                       {r.status === "草稿" ? (
@@ -157,7 +153,7 @@ export function ReceiptManagementListPage() {
                         </>
                       ) : null}
                     </div>
-                  </td>
+                  </DataCell>
                 </tr>
               ))}
             </tbody>
@@ -238,7 +234,16 @@ export function ReceiptManagementFormPage({ mode }: { mode: "create" | "edit" })
 
   return (
     <div className="flex flex-col gap-4">
-      <PageTitle title={mode === "create" ? "新增收款单" : `编辑收款单 ${draft?.receiptNo || ""}`} />
+      <PageTitle
+        title={mode === "create" ? "新增收款单" : `编辑收款单 ${draft?.receiptNo || ""}`}
+        actions={
+          <>
+            <Button onClick={() => navigate("/receipt-management")}>返回列表</Button>
+            <Button tone="primary" onClick={() => handlePersist("draft")}>保存草稿</Button>
+            <Button tone="primary" onClick={() => handlePersist("confirm")}>确认收款</Button>
+          </>
+        }
+      />
       <HintBox>不关联出库单时，系统自动将本单标记为「暂挂款」</HintBox>
 
       <div className="rounded-xl border border-line-1 bg-white">
@@ -260,14 +265,14 @@ export function ReceiptManagementFormPage({ mode }: { mode: "create" | "edit" })
             {errors.receiptMethod ? <div className="mt-1 text-xs text-danger">{errors.receiptMethod}</div> : null}
           </FormField>
           <FormField label="收款金额" required>
-            <Input value={form.receiptAmount} onChange={(v) => updateField("receiptAmount", v)} placeholder="0.00" />
+            <Input value={form.receiptAmount} onChange={(v) => updateField("receiptAmount", v.replace(/[^\d.]/g, "").replace(/^(\d*\.\d{0,2}).*$/, "$1"))} placeholder="0.00" maxLength={15} />
             {errors.receiptAmount ? <div className="mt-1 text-xs text-danger">{errors.receiptAmount}</div> : null}
           </FormField>
           <FormField label="到账账户">
-            <Input value={form.accountInfo} onChange={(v) => updateField("accountInfo", v)} placeholder="如：工商银行 6222xxxx·深圳分行（选填）" />
+            <Input value={form.accountInfo} onChange={(v) => updateField("accountInfo", v)} placeholder="如：工商银行 6222xxxx·深圳分行（选填）" maxLength={100} />
           </FormField>
           <FormField label="客户方付款账户">
-            <Input value={form.customerPaymentAccount} onChange={(v) => updateField("customerPaymentAccount", v)} placeholder="如：招商银行 6225xxxx（选填）" />
+            <Input value={form.customerPaymentAccount} onChange={(v) => updateField("customerPaymentAccount", v)} placeholder="如：招商银行 6225xxxx（选填）" maxLength={100} />
           </FormField>
           <FormField label="是否暂挂">
             <Select value={form.isHeld ? "暂挂款" : "已认款"} onChange={(v) => updateField("isHeld", v === "暂挂款")} options={["已认款", "暂挂款"]} />
@@ -275,7 +280,7 @@ export function ReceiptManagementFormPage({ mode }: { mode: "create" | "edit" })
         </div>
         <div className="px-6 pb-6">
           <FormField label="摘要/备注">
-            <TextArea value={form.note} onChange={(v) => updateField("note", v)} placeholder="如：11月货款、预付定金（选填）" />
+            <TextArea value={form.note} onChange={(v) => updateField("note", v)} placeholder="如：11月货款、预付定金（选填）" maxLength={200} />
           </FormField>
         </div>
       </div>
@@ -315,12 +320,6 @@ export function ReceiptManagementFormPage({ mode }: { mode: "create" | "edit" })
           <div className="text-sm text-text-2">收款差额<span className={`ml-2 font-medium ${receiptPreview.stats.differenceTone === "blue" ? "text-blue-600" : receiptPreview.stats.differenceTone === "orange" ? "text-orange-500" : "text-green-600"}`}>{receiptPreview.stats.difference}</span></div>
         </div>
       </div>
-
-      <div className="flex gap-3 border-t border-line-1 pt-4">
-        <Button tone="primary" onClick={() => handlePersist("draft")}>保存草稿</Button>
-        <Button tone="primary" onClick={() => handlePersist("confirm")}>确认收款</Button>
-        <Button onClick={() => navigate("/receipt-management")}>返回列表</Button>
-      </div>
     </div>
   );
 }
@@ -334,7 +333,25 @@ export function ReceiptManagementDetailPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageTitle title="收款单详情">{record.receiptNo} 的详细信息</PageTitle>
+      <PageTitle
+        title="收款单详情"
+        actions={
+          <>
+            <Button onClick={() => navigate("/receipt-management")}>返回列表</Button>
+            {record.status === "草稿" ? (
+              <>
+                <Button onClick={() => navigate(`/receipt-management/${record.id}/edit`)}>编辑</Button>
+                <Button tone="primary" onClick={() => { confirmReceiptRecord(record.id); Message.success("收款已确认，客户应收余额已更新"); navigate(`/receipt-management/${record.id}`); }}>确认收款</Button>
+                <Button onClick={() => { voidReceiptRecord(record.id); Message.success("收款单已作废"); navigate(`/receipt-management/${record.id}`); }}>作废</Button>
+                <Button onClick={() => { deleteReceiptRecord(record.id); Message.success("收款单已删除"); navigate("/receipt-management"); }}>删除</Button>
+              </>
+            ) : null}
+            <Button onClick={() => Message.success("导出成功")}>导出</Button>
+          </>
+        }
+      >
+        {record.receiptNo} 的详细信息
+      </PageTitle>
 
       <div className="rounded-xl border border-line-1 bg-white">
         <div className="border-b border-line-1 px-6 py-3 text-sm font-medium text-text-1">基本信息</div>
@@ -375,19 +392,6 @@ export function ReceiptManagementDetailPage() {
           <div><span className="text-text-2">最后修改人</span><div className="mt-1">{record.lastModifier || "-"}</div></div>
           <div><span className="text-text-2">最后修改时间</span><div className="mt-1">{record.updatedAt}</div></div>
         </div>
-      </div>
-
-      <div className="flex gap-3 border-t border-line-1 pt-4">
-        <Button onClick={() => navigate("/receipt-management")}>返回列表</Button>
-        {record.status === "草稿" ? (
-          <>
-            <Button onClick={() => navigate(`/receipt-management/${record.id}/edit`)}>编辑</Button>
-            <Button tone="primary" onClick={() => { confirmReceiptRecord(record.id); Message.success("收款已确认，客户应收余额已更新"); navigate(`/receipt-management/${record.id}`); }}>确认收款</Button>
-            <Button onClick={() => { voidReceiptRecord(record.id); Message.success("收款单已作废"); navigate(`/receipt-management/${record.id}`); }}>作废</Button>
-            <Button onClick={() => { deleteReceiptRecord(record.id); Message.success("收款单已删除"); navigate("/receipt-management"); }}>删除</Button>
-          </>
-        ) : null}
-        <Button onClick={() => Message.success("导出成功")}>导出</Button>
       </div>
     </div>
   );

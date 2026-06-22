@@ -1,12 +1,14 @@
 import { startTransition, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, FilterActions, FilterField, Message, Pagination, ResizableHeaderCell, SearchInput, Select, StatusPill, TabBar, TableSortHeader, useResizableColumns } from "../components/Ui";
+import { Button, FilterActions, Message, Pagination, ResizableHeaderCell, StatusPill, TabBar, TableSortHeader, useResizableColumns } from "../components/Ui";
 import { FilterItem } from "../components/FilterItem";
 import { getCrudModuleDefinition, getModuleDefinition, saveCrudModuleRecord, type CrudModuleDefinition, type QueryModuleDefinition, type Tone } from "../contracts/modules";
 import { GenericCrudListPage } from "./GenericModulePages";
 import type { ViewKey } from "../app/navigation";
 import { cn } from "../utils/cn";
-import { compareRecord, normalizeSortValue } from "../utils/sort";
+import { compareRecord } from "../utils/sort";
+import { ActionsCell, DataCell } from "../components/TableCells";
+import { TABLE_MIN_WIDTH } from "../utils/tableConstants";
 
 export function ProductManagementPage() {
   return <GenericCrudListPage view="product-management" />;
@@ -52,13 +54,15 @@ function PriorityCrudListPage({ view }: { view: ViewKey }) {
   const navigate = useNavigate();
   const module = getCrudModuleDefinition(view);
   const [records, setRecords] = useState(module?.records ?? []);
-  const [keyword, setKeyword] = useState("");
+  // search 类型字段按 key 独立存储，支持多字段并行搜索（与 GenericCrudListPage 对齐）
+  const [searchValues, setSearchValues] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState(module?.statusTabs?.[0] ?? "全部");
+  // select / batch 类型字段统一存这里（batch 存多行字符串）
   const [selectFilters, setSelectFilters] = useState<Record<string, string>>({});
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
-  const deferredKeyword = useDeferredValue(keyword);
+  const deferredSearchValues = useDeferredValue(searchValues);
 
   useEffect(() => {
     setRecords(module?.records ?? []);
@@ -79,28 +83,47 @@ function PriorityCrudListPage({ view }: { view: ViewKey }) {
   const { containerRef, totalWidth, getColumnStyle, startResize } = useResizableColumns(`${view}:priority-list`, listColumns);
 
   const filteredRows = useMemo(() => {
-    const normalized = deferredKeyword.trim().toLowerCase();
     return records.filter((record) => {
-      if (normalized) {
-        const rowText = Object.values(record)
-          .filter((value) => typeof value === "string" || typeof value === "number")
-          .join(" ")
-          .toLowerCase();
-        if (!rowText.includes(normalized)) return false;
-      }
+      // 整行文本，用于未配 targetFields 的 search 字段兜底模糊匹配
+      const rowText = Object.values(record)
+        .filter((value) => typeof value === "string" || typeof value === "number")
+        .join(" ")
+        .toLowerCase();
 
       if (module.statusTabs && activeTab !== module.statusTabs[0] && String(record.status) !== activeTab) {
         return false;
       }
 
-      for (const [key, value] of Object.entries(selectFilters)) {
-        if (!value || value.startsWith("全部")) continue;
-        if (String(record[key] ?? "") !== value) return false;
+      // 逐个 filter 独立判断：search 模糊、batch 批量精确、select 精确（与 GenericCrudListPage 对齐）
+      for (const filter of module.filters) {
+        if (filter.type === "search") {
+          const value = (deferredSearchValues[filter.key] ?? "").trim().toLowerCase();
+          if (!value) continue;
+          const targets = filter.targetFields;
+          const matched = targets
+            ? targets.some((field) => String(record[field] ?? "").toLowerCase().includes(value))
+            : rowText.includes(value);
+          if (!matched) return false;
+        } else if (filter.type === "batch") {
+          const raw = selectFilters[filter.key] ?? "";
+          const items = raw
+            .split(/[\n,，;；\t ]+/)
+            .map((item) => item.trim())
+            .filter(Boolean);
+          if (items.length === 0) continue;
+          const targets = filter.targetFields ?? ["code"];
+          const matched = targets.some((field) => items.includes(String(record[field] ?? "").trim()));
+          if (!matched) return false;
+        } else if (filter.type === "select") {
+          const value = selectFilters[filter.key];
+          if (!value || value.startsWith("全部")) continue;
+          if (String(record[filter.key] ?? "") !== value) return false;
+        }
       }
 
       return true;
     }).sort((a, b) => compareRecord(a, b, sortConfig));
-  }, [activeTab, deferredKeyword, records, module.statusTabs, selectFilters, sortConfig]);
+  }, [activeTab, deferredSearchValues, records, module.filters, module.statusTabs, selectFilters, sortConfig]);
 
   const paginatedRows = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -157,13 +180,13 @@ function PriorityCrudListPage({ view }: { view: ViewKey }) {
           <FilterItem
             key={filter.key}
             filter={filter}
-            keyword={keyword}
-            onKeywordChange={setKeyword}
+            keyword={searchValues[filter.key] ?? ""}
+            onKeywordChange={(value) => setSearchValues((current) => ({ ...current, [filter.key]: value }))}
             value={selectFilters[filter.key] ?? ""}
             onValueChange={(value) => setSelectFilters((current) => ({ ...current, [filter.key]: value }))}
           />
         ))}
-        <FilterActions onSecondaryClick={() => { setKeyword(""); setSelectFilters({}); }} />
+        <FilterActions onSecondaryClick={() => { setSearchValues({}); setSelectFilters({}); setCurrentPage(1); }} />
       </div>
 
       <div className="flex flex-col gap-3">
@@ -174,7 +197,7 @@ function PriorityCrudListPage({ view }: { view: ViewKey }) {
 
         <div className="overflow-hidden rounded-xl border border-line-1 shadow-soft">
           <div ref={containerRef} className="overflow-x-auto">
-          <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, 1100) }}>
+          <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, TABLE_MIN_WIDTH.standard) }}>
             <thead className="bg-fill-2 text-left text-text-2">
               <tr className="h-[44px]">
                 {module.columns.map((column) => (
@@ -203,13 +226,9 @@ function PriorityCrudListPage({ view }: { view: ViewKey }) {
               {paginatedRows.map((record) => (
                 <tr key={record.id} className="h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
                   {module.columns.map((column) => (
-                    <td key={column.key} className={cn("border-r border-line-1 px-4 whitespace-nowrap", column.align === "right" && "text-right")} style={getColumnStyle(column.key)} title={String(record[column.key] ?? "")}>
-                      <div className="overflow-hidden text-ellipsis">
-                        {renderPriorityValue(record[column.key], column.kind, record[column.toneKey ?? "statusTone"] as Tone | undefined)}
-                      </div>
-                    </td>
+                    <DataCell key={column.key} style={getColumnStyle(column.key)} align={column.align === "right" ? "right" : undefined} nowrap truncate title={String(record[column.key] ?? "")}>{renderPriorityValue(record[column.key], column.kind, record[column.toneKey ?? "statusTone"] as Tone | undefined)}</DataCell>
                   ))}
-                  <td className="px-4 whitespace-nowrap" style={getColumnStyle("__actions__")}>
+                  <ActionsCell style={getColumnStyle("__actions__")} nowrap>
                     <div className="flex items-center justify-center gap-2">
                       <Button size="sm" onClick={() => navigate(`/${view}/${record.id}`)}>查看</Button>
                       <Button size="sm" onClick={() => navigate(`/${view}/${record.id}/edit`)}>编辑</Button>
@@ -219,7 +238,7 @@ function PriorityCrudListPage({ view }: { view: ViewKey }) {
                         </Button>
                       ) : null}
                     </div>
-                  </td>
+                  </ActionsCell>
                 </tr>
               ))}
             </tbody>
@@ -274,9 +293,16 @@ function PriorityQueryListPage({ view }: { view: "sales-query" }) {
     const normalized = deferredKeyword.trim().toLowerCase();
     let rows = module.rows;
 
-    // 关键词过滤
+    // 关键词过滤（跳过 _ 开头的展示元数据字段，如 _tone / _agingTone，避免英文色名被误匹配）
     if (normalized) {
-      rows = rows.filter((row) => Object.values(row).join(" ").toLowerCase().includes(normalized));
+      rows = rows.filter((row) =>
+        Object.entries(row)
+          .filter(([key]) => !key.startsWith("_"))
+          .map(([, value]) => value)
+          .join(" ")
+          .toLowerCase()
+          .includes(normalized),
+      );
     }
 
     // 下拉筛选
@@ -333,7 +359,7 @@ function PriorityQueryListPage({ view }: { view: "sales-query" }) {
 
       <div className="overflow-hidden rounded-xl border border-line-1 shadow-soft">
         <div ref={containerRef} className="overflow-x-auto">
-          <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, 1080) }}>
+          <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, TABLE_MIN_WIDTH.priority) }}>
             <thead className="bg-fill-2 text-left text-text-2">
               <tr className="h-[44px]">
                 {module.columns.map((column) => (

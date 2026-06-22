@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { TABLE_MIN_WIDTH } from "../utils/tableConstants";
 import { useNavigate } from "react-router-dom";
 import { Button, FilterActions, FilterField, PageTitle, Pagination, ResizableHeaderCell, SearchInput, Select, StatusPill, TableSortHeader, useResizableColumns } from "../components/Ui";
 import { getPayableRows } from "../data/arWorkspace";
@@ -144,7 +145,7 @@ export function PayableQueryPage() {
       {/* 表格 */}
       <div className="overflow-hidden rounded-xl border border-line-1 shadow-soft">
         <div ref={containerRef} className="overflow-x-auto">
-          <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, 1100) }}>
+          <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, TABLE_MIN_WIDTH.standard) }}>
             <thead className="bg-fill-2 text-left text-text-2">
               <tr className="h-[44px]">
                 <ResizableHeaderCell width={getColumnStyle("supplier").width} minWidth={getColumnStyle("supplier").minWidth} onResizeStart={(clientX) => startResize("supplier", clientX)}>

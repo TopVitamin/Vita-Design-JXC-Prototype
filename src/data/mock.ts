@@ -1,66 +1,11 @@
-export type AppIconTone = "blue" | "cyan" | "sky" | "violet" | "amber" | "emerald";
+import type { ViewKey } from "../app/navigation";
 
-export type PageDepth = "core" | "secondary" | "placeholder";
-
-export type ViewKey =
-  | "dashboard"
-  | "sales-orders"
-  | "sales-return"
-  | "sales-return-inbound"
-    | "inventory-query"
-    | "customer-ledger"
-  | "product-management"
-  | "customer-management"
-  | "supplier-management"
-  | "warehouse-management"
-  | "sales-delivery"
-  | "sales-query"
-  | "purchase-orders"
-  | "purchase-receipt"
-  | "purchase-return"
-  | "purchase-return-stockout"
-  | "stock-transfer"
-  | "stock-count"
-  | "stock-loss"
-  | "receivable-query"
-  | "payable-query"
-  | "receipt-management"
-  | "payment-management"
-    | "sales-summary"
-  | "inventory-balance"
-  | "user-permission"
-  | "document-number"
-  | "opening-init"
-  | "print-template"
-  | "operation-log";
-
-export type NavChild = {
-  key: ViewKey;
-  label: string;
-  pageType: "dashboard" | "list" | "detail" | "form" | "query" | "cashier" | "placeholder" | "config";
-  depth: PageDepth;
-  description: string;
-  isIncomplete?: boolean;
-};
-
-export type NavGroup = {
-  id: string;
-  label: string;
-  children: NavChild[];
-};
-
-export type DashboardFeature = {
-  title: string;
-  desc: string;
-  accent: string;
-};
-
-export type DashboardTool = {
-  title: string;
-  desc: string;
-  color: string;
-  icon: AppIconTone;
-};
+// 本文件只保留 Dashboard / InventoryQuery / CustomerLedger / ModulePlaceholder 等页面
+// 实际消费的静态演示数据。模块化的 CRUD/Query 数据 SSOT 在 src/mocks/ 与
+// src/contracts/modules/，不要在此重复定义。
+//
+// 注意：导航配置（ViewKey / NavChild / NavGroup / inventoryNavGroups / getPageMeta）
+// 的唯一真相源在 src/app/navigation.ts，本文件不再重复定义。
 
 export type SalesOrder = {
   id: string;
@@ -70,7 +15,7 @@ export type SalesOrder = {
   warehouse: string;
   amount: string;
   status: string;
-  statusTone: "green" | "blue" | "orange" | "red" | "gray";
+  statusTone: "blue" | "orange" | "green" | "gray";
   paymentStatus: string;
   creator: string;
   createdAt: string;
@@ -85,7 +30,7 @@ export type InventoryRecord = {
   reservedStock: number;
   availableStock: number;
   warning: string;
-  tone: "green" | "orange" | "red" | "gray";
+  tone: "green" | "orange" | "red";
 };
 
 export type LedgerRecord = {
@@ -98,15 +43,7 @@ export type LedgerRecord = {
   balance: string;
   dueDate: string;
   status: string;
-  tone: "green" | "orange" | "red" | "gray";
-};
-
-export type CashierItem = {
-  sku: string;
-  name: string;
-  spec: string;
-  qty: number;
-  price: number;
+  tone: "green" | "orange" | "red";
 };
 
 export type PlaceholderSummary = {
@@ -115,308 +52,7 @@ export type PlaceholderSummary = {
   bullets: string[];
 };
 
-export type ReceiptFormState = {
-  customer: string;
-  documentType: string;
-  amount: string;
-  paymentMethod: string;
-  receivedAt: string;
-  handler: string;
-  note: string;
-};
-
-export const inventoryNavGroups: NavGroup[] = [
-  {
-    id: "dashboard",
-    label: "首页",
-    children: [
-      {
-        key: "dashboard",
-        label: "工作台",
-        pageType: "dashboard",
-        depth: "core",
-        description: "展示核心入口、待办和主链路概览。",
-        isIncomplete: true,
-      },
-    ],
-  },
-  {
-    id: "master-data",
-    label: "基础资料",
-    children: [
-      {
-        key: "product-management",
-        label: "商品管理",
-        pageType: "list",
-        depth: "secondary",
-        description: "维护商品档案、分类、规格和价格策略。",
-      },
-      {
-        key: "customer-management",
-        label: "客户管理",
-        pageType: "list",
-        depth: "secondary",
-        description: "维护客户等级、账期和往来策略。",
-      },
-      {
-        key: "supplier-management",
-        label: "供应商管理",
-        pageType: "list",
-        depth: "secondary",
-        description: "维护供应商主体、合作属性和结算规则。",
-      },
-      {
-        key: "warehouse-management",
-        label: "仓库管理",
-        pageType: "list",
-        depth: "secondary",
-        description: "维护仓库档案、用途和库存归属。",
-      },
-    ],
-  },
-  {
-    id: "sales",
-    label: "销售管理",
-    children: [
-      {
-        key: "sales-orders",
-        label: "销售订单",
-        pageType: "list",
-        depth: "core",
-        description: "承接批发开单主链路，处理订单查询、新增、状态跟踪。",
-      },
-      {
-        key: "sales-delivery",
-        label: "销售出库",
-        pageType: "detail",
-        depth: "secondary",
-        description: "查看和执行销售出库，跟踪发货状态。",
-        isIncomplete: true,
-      },
-      {
-        key: "sales-return",
-        label: "销售退货",
-        pageType: "list",
-        depth: "secondary",
-        description: "查看销售退货记录与客户逆向处理状态。",
-        isIncomplete: true,
-      },
-      {
-        key: "sales-return-inbound",
-        label: "销售退货入库",
-        pageType: "list",
-        depth: "secondary",
-        description: "查看销售退货入库执行记录与库存回加状态。",
-        isIncomplete: true,
-      },
-      {
-        key: "sales-query",
-        label: "销售查询",
-        pageType: "query",
-        depth: "secondary",
-        description: "查询订单、客户、商品维度的销售记录。",
-        isIncomplete: true,
-      },
-    ],
-  },
-  {
-    id: "purchase",
-    label: "采购管理",
-    children: [
-      {
-        key: "purchase-orders",
-        label: "采购订单",
-        pageType: "list",
-        depth: "secondary",
-        description: "查看采购下单记录，承接供货需求。",
-        isIncomplete: true,
-      },
-      {
-        key: "purchase-receipt",
-        label: "采购入库",
-        pageType: "list",
-        depth: "secondary",
-        description: "查看采购入库和到货状态。",
-        isIncomplete: true,
-      },
-      {
-        key: "purchase-return",
-        label: "采购退货",
-        pageType: "list",
-        depth: "secondary",
-        description: "查看采购退货记录与供应商协同状态。",
-        isIncomplete: true,
-      },
-      {
-        key: "purchase-return-stockout",
-        label: "采购退货出库",
-        pageType: "list",
-        depth: "secondary",
-        description: "查看采购退货出库执行记录与库存扣减状态。",
-        isIncomplete: true,
-      },
-    ],
-  },
-  {
-    id: "stock",
-    label: "库存管理",
-    children: [
-      {
-        key: "inventory-query",
-        label: "库存查询",
-        pageType: "query",
-        depth: "core",
-        description: "展示现存、占用、可用库存，承接共享底账查询。",
-        isIncomplete: true,
-      },
-      {
-        key: "stock-transfer",
-        label: "调拨管理",
-        pageType: "list",
-        depth: "secondary",
-        description: "记录仓间调拨和调拨执行状态。",
-        isIncomplete: true,
-      },
-      {
-        key: "stock-count",
-        label: "盘点管理",
-        pageType: "list",
-        depth: "secondary",
-        description: "查看盘点计划、差异和处理结果。",
-        isIncomplete: true,
-      },
-      {
-        key: "stock-loss",
-        label: "报损管理",
-        pageType: "list",
-        depth: "secondary",
-        description: "记录报损申请和库存调整结果。",
-        isIncomplete: true,
-      },
-    ],
-  },
-  {
-    id: "finance",
-    label: "往来管理",
-    children: [
-      {
-        key: "receivable-query",
-        label: "应收查询",
-        pageType: "query",
-        depth: "secondary",
-        description: "查看客户应收余额与账龄。",
-        isIncomplete: true,
-      },
-      {
-        key: "payable-query",
-        label: "应付查询",
-        pageType: "query",
-        depth: "secondary",
-        description: "查看供应商应付余额与账期。",
-        isIncomplete: true,
-      },
-      ],
-  },
-  {
-    id: "stats",
-    label: "查询统计",
-    children: [
-      {
-        key: "sales-summary",
-        label: "销售汇总",
-        pageType: "query",
-        depth: "secondary",
-        description: "提供基础销售汇总指标和趋势。",
-        isIncomplete: true,
-      },
-      {
-        key: "inventory-balance",
-        label: "库存余额",
-        pageType: "query",
-        depth: "secondary",
-        description: "提供库存余额和仓库口径视图。",
-        isIncomplete: true,
-      },
-      {
-        key: "customer-ledger",
-        label: "客户往来查询",
-        pageType: "query",
-        depth: "core",
-        description: "查看客户应收、回款记录和往来余额。",
-        isIncomplete: true,
-      },
-    ],
-  },
-  {
-    id: "settings",
-    label: "系统设置",
-    children: [
-      {
-        key: "user-permission",
-        label: "用户与权限",
-        pageType: "config",
-        depth: "secondary",
-        description: "维护用户账号、角色与数据权限。",
-      },
-      {
-        key: "document-number",
-        label: "单据编号",
-        pageType: "config",
-        depth: "secondary",
-        description: "配置销售、采购、库存单据的编号规则。",
-      },
-      {
-        key: "opening-init",
-        label: "期初初始化",
-        pageType: "config",
-        depth: "secondary",
-        description: "查看商品、客户、供应商和库存期初导入状态。",
-      },
-      {
-        key: "print-template",
-        label: "打印模板",
-        pageType: "config",
-        depth: "secondary",
-        description: "维护销售、采购、库存单据打印模板。",
-      },
-      {
-        key: "operation-log",
-        label: "操作日志",
-        pageType: "config",
-        depth: "secondary",
-        description: "查看关键业务操作、审批动作和配置变更。",
-      },
-    ],
-  },
-];
-
-export const inventoryShortcuts = [
-  "销售订单",
-  "零售收银",
-  "库存查询",
-  "收款登记",
-];
-
-export const dashboardFeatureCards: DashboardFeature[] = [
-  { title: "销售订单主链路", desc: "从批发开单到出库跟踪，串起一期核心交易流程。", accent: "bg-blue-600" },
-  { title: "零售收银台", desc: "覆盖门店现场成交、改价、抹零和即时收款。", accent: "bg-emerald-500" },
-  { title: "库存共享底账", desc: "统一现存、占用、可用库存口径，支撑业务与仓库协同。", accent: "bg-violet-500" },
-  { title: "客户往来闭环", desc: "把应收查询、收款登记和历史回款记录串成闭环。", accent: "bg-amber-500" },
-];
-
-export const dashboardTools: DashboardTool[] = [
-  { title: "销售订单", desc: "查看订单、跟踪状态、进入开单主链路。", color: "from-blue-50 to-blue-100", icon: "blue" },
-  { title: "库存查询", desc: "按仓库、商品、状态查看实时库存。", color: "from-sky-50 to-sky-100", icon: "sky" },
-  { title: "收款登记", desc: "承接财务回款登记和备注记录。", color: "from-violet-50 to-violet-100", icon: "violet" },
-  { title: "客户往来", desc: "查看客户应收和回款明细。", color: "from-amber-50 to-amber-100", icon: "amber" },
-  { title: "采购订单", desc: "查看采购单据和到货协同状态。", color: "from-emerald-50 to-emerald-100", icon: "emerald" },
-];
-
 export const recentVisits = ["销售订单", "库存查询", "收款登记", "客户往来", "采购订单", "商品管理"];
-
-export const recommendationCards = ["打印模板", "调拨管理", "库存余额", "操作日志"];
-
-export const salesOrderTabs = ["全部订单", "待审核", "待出库", "已完成", "已关闭"];
 
 export const salesOrders: SalesOrder[] = [
   {
@@ -572,31 +208,6 @@ export const ledgerRecords: LedgerRecord[] = [
   },
 ];
 
-export const cashierQuickGoods = [
-  "扫码枪标准版",
-  "标签打印纸",
-  "热敏打印机",
-  "仓储周转箱",
-  "蓝牙手持终端",
-  "标签色带",
-];
-
-export const cashierItems: CashierItem[] = [
-  { sku: "SKU-100124", name: "便携扫码枪", spec: "无线版", qty: 2, price: 299 },
-  { sku: "SKU-100331", name: "标签打印纸", spec: "100mm*50mm", qty: 6, price: 18 },
-  { sku: "SKU-100422", name: "热敏打印机", spec: "旗舰版", qty: 1, price: 699 },
-];
-
-export const receiptFormDefault: ReceiptFormState = {
-  customer: "",
-  documentType: "",
-  amount: "",
-  paymentMethod: "",
-  receivedAt: "",
-  handler: "",
-  note: "",
-};
-
 export const placeholderSummaries: Record<ViewKey, PlaceholderSummary> = {
   dashboard: {
     title: "工作台",
@@ -699,7 +310,7 @@ export const placeholderSummaries: Record<ViewKey, PlaceholderSummary> = {
     bullets: ["查询区", "结果区", "后续联动"],
   },
   "receipt-management": {
-    title: "收款单",
+    title: "收款登记",
     desc: "管理客户收款记录，支持登记、确认和核销。",
     bullets: ["列表页", "新增/编辑页", "详情页"],
   },
@@ -709,7 +320,7 @@ export const placeholderSummaries: Record<ViewKey, PlaceholderSummary> = {
     bullets: ["查询区", "结果区", "后续联动"],
   },
   "payment-management": {
-    title: "付款单",
+    title: "付款登记",
     desc: "管理供应商付款记录，支持登记、确认和核销。",
     bullets: ["列表页", "新增/编辑页", "详情页"],
   },
@@ -749,28 +360,3 @@ export const placeholderSummaries: Record<ViewKey, PlaceholderSummary> = {
     bullets: ["页面标题", "未展开原因", "后续扩展方向"],
   },
 };
-
-export function getPageMeta(view: ViewKey) {
-  for (const group of inventoryNavGroups) {
-    const page = group.children.find((item) => item.key === view);
-    if (page) {
-      return {
-        sectionId: group.id,
-        sectionLabel: group.label,
-        pageLabel: page.label,
-        pageType: page.pageType,
-        pageDepth: page.depth,
-        description: page.description,
-      };
-    }
-  }
-
-  return {
-    sectionId: "dashboard",
-    sectionLabel: "首页",
-    pageLabel: "工作台",
-    pageType: "dashboard" as const,
-    pageDepth: "core" as const,
-    description: "展示核心入口、待办和主链路概览。",
-  };
-}

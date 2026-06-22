@@ -2,6 +2,11 @@ import type { CrudModuleDefinition } from "../types";
 import { buildDocumentModule, money } from "./shared";
 import { paymentRecords } from "../../mocks/payments";
 
+/**
+ * 注意：此 CrudModuleDefinition 当前未被路由消费（付款登记的实际页面是
+ * src/pages/PaymentManagementPage.tsx，独立实现）。本文件作为字段设计预留
+ * 定义保留，便于将来把付款登记收敛进 GenericCrud 体系时复用。
+ */
 export const paymentManagementModuleDefinition: CrudModuleDefinition = buildDocumentModule({
   view: "payment-management",
   title: "付款单",

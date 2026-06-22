@@ -10,14 +10,13 @@ import {
   Plus,
   ReceiptText,
   ShoppingCart,
-  Store,
   TrendingDown,
   TrendingUp,
   Truck,
   Wallet,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { recentVisits } from "../mocks/dashboard";
+import { recentVisits } from "../data/mock";
 import { salesOrders } from "../data/mock";
 import { cn } from "../utils/cn";
 
@@ -80,9 +79,9 @@ const kpiCards = [
 // ── Quick actions ─────────────────────────────────────────────────────────────
 const quickActions = [
   { label: "新建销售订单", icon: Plus, route: "/sales-orders", primary: true },
-  { label: "零售收银", icon: Store, route: "/retail-cashier", primary: false },
+  { label: "采购订单", icon: Truck, route: "/purchase-orders", primary: false },
   { label: "库存查询", icon: LayoutGrid, route: "/inventory-query", primary: false },
-  { label: "收款登记", icon: Wallet, route: "/receipt-entry", primary: false },
+  { label: "收款登记", icon: Wallet, route: "/receipt-management", primary: false },
 ];
 
 // ── Module groups ─────────────────────────────────────────────────────────────
@@ -123,7 +122,7 @@ const moduleGroups = [
     accent: "bg-amber-500",
     modules: [
       { label: "应收查询", desc: "客户应收余额", route: "/receivable-query", incomplete: true },
-      { label: "收款登记", desc: "回款录入确认", route: "/receipt-entry", incomplete: true },
+      { label: "收款登记", desc: "回款录入确认", route: "/receipt-management" },
       { label: "应付查询", desc: "供应商应付余额", route: "/payable-query", incomplete: true },
     ],
   },
@@ -131,11 +130,10 @@ const moduleGroups = [
 
 const routeMap: Record<string, string> = {
   销售订单: "/sales-orders",
-  零售收银: "/retail-cashier",
-  库存查询: "/inventory-query",
-  收款登记: "/receipt-entry",
-  客户往来: "/customer-ledger",
   采购订单: "/purchase-orders",
+  库存查询: "/inventory-query",
+  收款登记: "/receipt-management",
+  客户往来: "/customer-ledger",
   商品管理: "/product-management",
 };
 

@@ -133,7 +133,8 @@ export const customerManagementModuleDefinition: CrudModuleDefinition = buildEnt
   singular: "客户",
   listDescription: "维护客户基础资料、价格规则、结算口径和信用额度。",
   filters: [
-    { key: "keyword", label: "综合搜索", type: "search", placeholder: "客户编码 / 客户名称 / 联系人" },
+    { key: "code", label: "客户编码", type: "batch", placeholder: "可批量，精确匹配", targetFields: ["code"] },
+    { key: "name", label: "客户名称", type: "search", placeholder: "客户名称 / 联系人", targetFields: ["name", "contact"] },
     { key: "level", label: "客户等级", type: "select", options: customerLevelOptions },
     { key: "settlementMethod", label: "结算方式", type: "select", options: customerSettlementOptions },
     { key: "status", label: "状态", type: "select", options: enabledStatusOptions },

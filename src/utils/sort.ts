@@ -8,7 +8,7 @@ export function normalizeSortValue(value: unknown) {
   return text.toLowerCase();
 }
 
-export function compareRecord<T extends Record<string, unknown>>(
+export function compareRecord<T>(
   a: T,
   b: T,
   sortConfig: { key: string; direction: "asc" | "desc" } | null,
@@ -16,8 +16,8 @@ export function compareRecord<T extends Record<string, unknown>>(
   if (!sortConfig) return 0;
   const { key, direction } = sortConfig;
   const factor = direction === "asc" ? 1 : -1;
-  const valueA = normalizeSortValue(a[key]);
-  const valueB = normalizeSortValue(b[key]);
+  const valueA = normalizeSortValue((a as Record<string, unknown>)[key]);
+  const valueB = normalizeSortValue((b as Record<string, unknown>)[key]);
   if (valueA < valueB) return -1 * factor;
   if (valueA > valueB) return 1 * factor;
   return 0;

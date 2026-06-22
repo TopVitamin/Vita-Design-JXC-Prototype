@@ -1,3 +1,6 @@
+// 注意：本文件中只有 SalesOrderSection 被 GenericModulePages 引用（作为内容卡片容器）。
+// 其余组件（SalesOrderEditor 等）是 V1 遗留代码，已被 SalesModulePages V2 取代，不再使用。
+// 如需彻底清理，可将 SalesOrderSection 合并到 ModuleKit.SurfaceCard 后删除本文件。
 import type { ReactNode } from "react";
 import { AlertCircle, ArrowRight, ChevronDown, ClipboardList, Plus, Trash2 } from "lucide-react";
 import type {

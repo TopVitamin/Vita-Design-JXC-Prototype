@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
+import { TABLE_MIN_WIDTH } from "../utils/tableConstants";
 import { useNavigate } from "react-router-dom";
-import { Button, FilterActions, FilterField, PageTitle, Pagination, ResizableHeaderCell, SearchInput, Select, StatusPill, TableSortHeader, useResizableColumns } from "../components/Ui";
+import { Button, FilterActions, FilterField, PageTitle, Pagination, ResizableHeaderCell, SearchInput, Select, TableSortHeader, useResizableColumns } from "../components/Ui";
 import { getReceivableRows } from "../data/arWorkspace";
 import { money } from "../contracts/modules/shared";
 import { cn } from "../utils/cn";
@@ -157,7 +158,7 @@ export function ReceivableQueryPage() {
       {/* 表格 */}
       <div className="overflow-hidden rounded-xl border border-line-1 shadow-soft">
         <div ref={containerRef} className="overflow-x-auto">
-          <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, 1100) }}>
+          <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, TABLE_MIN_WIDTH.standard) }}>
             <thead className="bg-fill-2 text-left text-text-2">
               <tr className="h-[44px]">
                 <ResizableHeaderCell width={getColumnStyle("customer").width} minWidth={getColumnStyle("customer").minWidth} onResizeStart={(clientX) => startResize("customer", clientX)}>

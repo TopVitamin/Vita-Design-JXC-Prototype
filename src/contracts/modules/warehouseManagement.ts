@@ -18,7 +18,8 @@ export const warehouseManagementModuleDefinition: CrudModuleDefinition = buildEn
   singular: "仓库",
   listDescription: "维护仓库档案、类型和责任信息。",
   filters: [
-    { key: "keyword", label: "综合搜索", type: "search", placeholder: "仓库编码 / 名称 / 负责人" },
+    { key: "code", label: "仓库编码", type: "batch", placeholder: "可批量，精确匹配", targetFields: ["code"] },
+    { key: "name", label: "仓库名称", type: "search", placeholder: "名称 / 负责人 / 电话", targetFields: ["name", "manager", "phone"] },
     { key: "type", label: "仓库类型", type: "select", options: ["全部类型", "后仓", "门店仓"] },
     { key: "status", label: "状态", type: "select", options: entityStatusOptions },
   ],
@@ -132,6 +133,6 @@ export const warehouseManagementModuleDefinition: CrudModuleDefinition = buildEn
       ],
     },
   ],
-  noteKeys: { external: "remark", internal: "remark" },
+  noteKeys: { external: "remark", internal: "stopReason" },
   tags: ["后仓", "门店仓", "主数据底账"],
 });

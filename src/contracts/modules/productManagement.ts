@@ -126,7 +126,9 @@ export const productManagementModuleDefinition: CrudModuleDefinition = buildEnti
   singular: "商品",
   listDescription: "维护商品识别口径、规格信息和价格信息。",
   filters: [
-    { key: "keyword", label: "综合搜索", type: "search", placeholder: "商品编码 / 商品名称 / 条码" },
+    { key: "code", label: "商品编码", type: "batch", placeholder: "可批量，精确匹配", targetFields: ["code"] },
+    { key: "barcode", label: "条码", type: "batch", placeholder: "可批量，精确匹配", targetFields: ["barcode"] },
+    { key: "name", label: "商品名称", type: "search", placeholder: "按商品名称模糊搜索", targetFields: ["name", "specModel"] },
     { key: "category", label: "商品分类", type: "select", options: ["全部", ...productCategoryOptions] },
     { key: "status", label: "状态", type: "select", options: entityStatusOptions },
   ],

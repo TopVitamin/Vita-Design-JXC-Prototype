@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
-import { Button, FilterActions, FilterField, Pagination, ResizableHeaderCell, SearchInput, Select, StatusPill, TableSortHeader, useResizableColumns } from "../components/Ui";
-import { inventoryRecords } from "../mocks/inventory";
+import { TABLE_MIN_WIDTH } from "../utils/tableConstants";
+import { Button, FilterActions, FilterField, Pagination, ResizableHeaderCell, SearchInput, Select, TableSortHeader, useResizableColumns } from "../components/Ui";
+import { DataCell, StatusCell } from "../components/TableCells";
+import { inventoryRecords } from "../data/mock";
 
 export function InventoryQueryPage() {
   const [keyword, setKeyword] = useState("");
@@ -87,7 +89,7 @@ export function InventoryQueryPage() {
 
       <div className="overflow-hidden rounded-xl border border-line-1 shadow-soft">
         <div ref={containerRef} className="overflow-x-auto">
-          <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, 1100) }}>
+          <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, TABLE_MIN_WIDTH.standard) }}>
             <thead className="bg-fill-2 text-left text-text-2">
               <tr className="h-[44px]">
                 <ResizableHeaderCell width={getColumnStyle("sku").width} minWidth={getColumnStyle("sku").minWidth} onResizeStart={(clientX) => startResize("sku", clientX)}><TableSortHeader label="SKU" sortKey="sku" currentSort={sortConfig} onSort={handleSort} /></ResizableHeaderCell>
@@ -103,16 +105,14 @@ export function InventoryQueryPage() {
             <tbody>
               {paginatedRows.map((item) => (
                 <tr key={item.sku} className="h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
-                  <td className="border-r border-line-1 px-4 whitespace-nowrap" style={getColumnStyle("sku")}>{item.sku}</td>
-                  <td className="border-r border-line-1 px-4 text-text-1 whitespace-nowrap" style={getColumnStyle("productName")} title={item.productName}><div className="overflow-hidden text-ellipsis">{item.productName}</div></td>
-                  <td className="border-r border-line-1 px-4 whitespace-nowrap" style={getColumnStyle("spec")}>{item.spec}</td>
-                  <td className="border-r border-line-1 px-4 whitespace-nowrap" style={getColumnStyle("warehouse")}>{item.warehouse}</td>
-                  <td className="border-r border-line-1 px-4 text-right whitespace-nowrap" style={getColumnStyle("currentStock")}>{item.currentStock}</td>
-                  <td className="border-r border-line-1 px-4 text-right whitespace-nowrap" style={getColumnStyle("reservedStock")}>{item.reservedStock}</td>
-                  <td className="border-r border-line-1 px-4 text-right font-medium text-text-1 whitespace-nowrap" style={getColumnStyle("availableStock")}>{item.availableStock}</td>
-                  <td className="px-4 whitespace-nowrap" style={getColumnStyle("warning")}>
-                    <StatusPill tone={item.tone}>{item.warning}</StatusPill>
-                  </td>
+                  <DataCell style={getColumnStyle("sku")} nowrap>{item.sku}</DataCell>
+                  <DataCell style={getColumnStyle("productName")} nowrap className="text-text-1" truncate title={item.productName}>{item.productName}</DataCell>
+                  <DataCell style={getColumnStyle("spec")} nowrap>{item.spec}</DataCell>
+                  <DataCell style={getColumnStyle("warehouse")} nowrap>{item.warehouse}</DataCell>
+                  <DataCell style={getColumnStyle("currentStock")} align="right" nowrap>{item.currentStock}</DataCell>
+                  <DataCell style={getColumnStyle("reservedStock")} align="right" nowrap>{item.reservedStock}</DataCell>
+                  <DataCell style={getColumnStyle("availableStock")} align="right" nowrap emphasis>{item.availableStock}</DataCell>
+                  <StatusCell style={getColumnStyle("warning")} nowrap isLast tone={item.tone} label={item.warning} />
                 </tr>
               ))}
             </tbody>

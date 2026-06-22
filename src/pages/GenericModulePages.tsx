@@ -14,29 +14,34 @@ import {
   queryModuleViews,
   saveCrudModuleRecord,
   type ConfigModuleDefinition,
-  type CrudModuleDefinition,
   type CrudRecord,
   type FormModuleDefinition,
   type ModuleColumn,
   type ModuleField,
-  type ModuleFilter,
+  type ModuleLineItem,
+  type ModuleLog,
+  type ModuleRelation,
   type QueryModuleDefinition,
   type Tone,
 } from "../contracts/modules";
+import { TABLE_MIN_WIDTH } from "../utils/tableConstants";
 import type { ViewKey } from "../app/navigation";
 import { cn } from "../utils/cn";
-import { compareRecord, normalizeSortValue } from "../utils/sort";
+import { compareRecord } from "../utils/sort";
+import { DataCell } from "../components/TableCells";
 
 export function GenericCrudListPage({ view }: { view: ViewKey }) {
   const navigate = useNavigate();
   const module = getCrudModuleDefinition(view);
-  const [keyword, setKeyword] = useState("");
+  // search 类型字段按 key 独立存储，支持多字段并行搜索
+  const [searchValues, setSearchValues] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState(module?.statusTabs?.[0] ?? "全部单据");
+  // select / batch 类型字段统一存这里（batch 存多行字符串）
   const [selectFilters, setSelectFilters] = useState<Record<string, string>>({});
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const deferredKeyword = useDeferredValue(keyword);
+  const deferredSearchValues = useDeferredValue(searchValues);
 
   // 启停用弹窗 state（仅 entity 类型使用）
   const [statusTarget, setStatusTarget] = useState<CrudRecord | null>(null);
@@ -59,29 +64,47 @@ export function GenericCrudListPage({ view }: { view: ViewKey }) {
   const { containerRef, totalWidth, getColumnStyle, startResize } = useResizableColumns(`${view}:list`, listColumns);
 
   const filteredRows = useMemo(() => {
-    const normalized = deferredKeyword.trim().toLowerCase();
     return module.records.filter((record) => {
+      // 整行文本，用于未配 targetFields 的 search 字段兜底模糊匹配
       const rowText = Object.values(record)
         .filter((value) => typeof value === "string" || typeof value === "number")
         .join(" ")
         .toLowerCase();
 
-      if (normalized && !rowText.includes(normalized)) {
-        return false;
-      }
-
       if (module.statusTabs && activeTab !== module.statusTabs[0] && record.status !== activeTab) {
         return false;
       }
 
-      for (const [key, value] of Object.entries(selectFilters)) {
-        if (!value || value.startsWith("全部")) continue;
-        if (String(record[key] ?? "") !== value) return false;
+      // 逐个 filter 独立判断：search 模糊、batch 批量精确、select 精确
+      for (const filter of module.filters) {
+        if (filter.type === "search") {
+          const value = (deferredSearchValues[filter.key] ?? "").trim().toLowerCase();
+          if (!value) continue;
+          const targets = filter.targetFields;
+          const matched = targets
+            ? targets.some((field) => String(record[field] ?? "").toLowerCase().includes(value))
+            : rowText.includes(value);
+          if (!matched) return false;
+        } else if (filter.type === "batch") {
+          const raw = selectFilters[filter.key] ?? "";
+          const items = raw
+            .split(/[\n,，;；\t ]+/)
+            .map((item) => item.trim())
+            .filter(Boolean);
+          if (items.length === 0) continue;
+          const targets = filter.targetFields ?? ["code"];
+          const matched = targets.some((field) => items.includes(String(record[field] ?? "").trim()));
+          if (!matched) return false;
+        } else if (filter.type === "select") {
+          const value = selectFilters[filter.key];
+          if (!value || value.startsWith("全部")) continue;
+          if (String(record[filter.key] ?? "") !== value) return false;
+        }
       }
 
       return true;
     }).sort((a, b) => compareRecord(a, b, sortConfig));
-  }, [activeTab, deferredKeyword, module.records, module.statusTabs, selectFilters, sortConfig]);
+  }, [activeTab, deferredSearchValues, module.filters, module.records, module.statusTabs, selectFilters, sortConfig]);
 
   const handleSort = (key: string) => {
     let direction: "asc" | "desc" = "asc";
@@ -148,13 +171,13 @@ export function GenericCrudListPage({ view }: { view: ViewKey }) {
           <FilterItem
             key={filter.key}
             filter={filter}
-            keyword={keyword}
-            onKeywordChange={setKeyword}
+            keyword={searchValues[filter.key] ?? ""}
+            onKeywordChange={(value) => setSearchValues((current) => ({ ...current, [filter.key]: value }))}
             value={selectFilters[filter.key] ?? ""}
             onValueChange={(value) => setSelectFilters((current) => ({ ...current, [filter.key]: value }))}
           />
         ))}
-        <FilterActions onSecondaryClick={() => { setKeyword(""); setSelectFilters({}); }} />
+        <FilterActions onSecondaryClick={() => { setSearchValues({}); setSelectFilters({}); setCurrentPage(1); }} />
       </div>
 
       <div className="flex flex-col gap-3">
@@ -165,7 +188,7 @@ export function GenericCrudListPage({ view }: { view: ViewKey }) {
 
         <div className="overflow-hidden rounded-xl border border-line-1 shadow-soft">
           <div ref={containerRef} className="overflow-x-auto">
-          <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, 1100) }}>
+          <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, TABLE_MIN_WIDTH.standard) }}>
             <thead className="bg-fill-2 text-left text-text-2">
               <tr className="h-[44px]">
                 {module.columns.map((column) => (
@@ -194,11 +217,7 @@ export function GenericCrudListPage({ view }: { view: ViewKey }) {
               {paginatedRows.map((record) => (
                 <tr key={record.id} className="h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
                   {module.columns.map((column) => (
-                    <td key={column.key} className={cn("border-r border-line-1 px-4 whitespace-nowrap", column.align === "right" && "text-right")} style={getColumnStyle(column.key)} title={String(record[column.key] ?? "")}>
-                      <div className="overflow-hidden text-ellipsis">
-                        {renderColumnValue(record, column)}
-                      </div>
-                    </td>
+                    <DataCell key={column.key} style={getColumnStyle(column.key)} align={column.align === "right" ? "right" : undefined} nowrap truncate title={String(record[column.key] ?? "")}>{renderColumnValue(record, column)}</DataCell>
                   ))}
                   <td className="px-4 whitespace-nowrap" style={getColumnStyle("__actions__")}>
                     <div className="flex items-center justify-center gap-2">
@@ -306,7 +325,7 @@ export function GenericCrudEditorPage({
     );
   }
 
-  const lines = (form.lines as any[] | undefined) ?? [];
+  const lines = (form.lines as ModuleLineItem[] | undefined) ?? [];
   const totalQty = lines.reduce((sum, item) => sum + Number(item.qty ?? 0), 0);
   const totalAmount = lines.reduce((sum, item) => sum + Number(item.amount ?? 0), 0);
 
@@ -439,7 +458,12 @@ export function GenericCrudEditorPage({
       return;
     }
 
-    const saved = saveCrudModuleRecord(view, form as CrudRecord, mode);
+    // 应用 beforeSave 钩子（字段裁剪、默认值注入等），未定义时透传原 form
+    const finalRecord = module.beforeSave
+      ? module.beforeSave({ record: form as CrudRecord, mode, sourceRecord, module })
+      : (form as CrudRecord);
+
+    const saved = saveCrudModuleRecord(view, finalRecord, mode);
     if (!saved) {
       Message.error(`${module.singular}保存失败。`, 3000);
       return;
@@ -450,7 +474,15 @@ export function GenericCrudEditorPage({
 
   return (
     <div className="space-y-4">
-      <PageTitle title={mode === "create" ? `新增${module.singular}` : `编辑${module.singular}`} />
+      <PageTitle
+        title={mode === "create" ? `新增${module.singular}` : `编辑${module.singular}`}
+        actions={
+          <>
+            <Button tone="primary" onClick={handleSave}>保存</Button>
+            <Button onClick={() => navigate(`/${view}`)}>返回列表</Button>
+          </>
+        }
+      />
 
       <div className="space-y-4">
         {module.formSections.map((section) => (
@@ -502,11 +534,6 @@ export function GenericCrudEditorPage({
           </SalesOrderSection>
         ) : null}
       </div>
-
-      <div className="flex flex-col gap-3 border-t border-line-1 pt-4 sm:flex-row sm:justify-end">
-        <Button tone="primary" onClick={handleSave}>保存</Button>
-        <Button onClick={() => navigate(`/${view}`)}>返回列表</Button>
-      </div>
     </div>
   );
 }
@@ -516,7 +543,7 @@ export function GenericCrudDetailPage({ view }: { view: ViewKey }) {
   const { recordId = "" } = useParams();
   const module = getCrudModuleDefinition(view);
   const record = getCrudModuleRecord(view, recordId);
-  const [activeTab, setActiveTab] = useState(module?.kind === "document" ? "detail" : "profile");
+  const [activeTab, setActiveTab] = useState<string>(module?.kind === "document" ? "detail" : "profile");
   const [statusAction, setStatusAction] = useState<"启用" | "停用" | null>(null);
   const [stopReason, setStopReason] = useState("");
   const [stopReasonError, setStopReasonError] = useState("");
@@ -581,7 +608,7 @@ export function GenericCrudDetailPage({ view }: { view: ViewKey }) {
 
       <TabBar
         items={tabs}
-        activeKey={activeTab as any}
+        activeKey={activeTab}
         onChange={(tab) => startTransition(() => setActiveTab(tab))}
         className="mb-4 border-line-1"
       />
@@ -652,7 +679,7 @@ export function GenericCrudDetailPage({ view }: { view: ViewKey }) {
 
       {activeTab === "logs" ? (
         <SalesOrderSection title="操作日志">
-          <ModuleLogTable logs={(record.logs ?? []) as any[]} tableId={`${view}-${record.id}`} />
+          <ModuleLogTable logs={(record.logs ?? []) as ModuleLog[]} tableId={`${view}-${record.id}`} />
         </SalesOrderSection>
       ) : null}
 
@@ -667,7 +694,7 @@ export function GenericCrudDetailPage({ view }: { view: ViewKey }) {
             </SalesOrderSection>
             <SalesOrderSection title="关联记录">
               <div className="space-y-3">
-                {((record.relations ?? []) as any[]).map((item, index) => (
+                {((record.relations ?? []) as ModuleRelation[]).map((item, index) => (
                   <div key={`${item.no}-${index}`} className="flex items-center justify-between rounded-xl border border-line-1 px-4 py-3 shadow-card">
                     <div>
                       <div className="text-sm font-medium text-text-1">{item.type}</div>
@@ -763,9 +790,16 @@ export function GenericQueryPage({ view }: { view: ViewKey }) {
     const normalized = deferredKeyword.trim().toLowerCase();
     let rows = module.rows;
 
-    // 关键词过滤
+    // 关键词过滤（跳过 _ 开头的展示元数据字段，如 _tone / _agingTone，避免英文色名被误匹配）
     if (normalized) {
-      rows = rows.filter((row) => Object.values(row).join(" ").toLowerCase().includes(normalized));
+      rows = rows.filter((row) =>
+        Object.entries(row)
+          .filter(([key]) => !key.startsWith("_"))
+          .map(([, value]) => value)
+          .join(" ")
+          .toLowerCase()
+          .includes(normalized),
+      );
     }
 
     // 下拉筛选
@@ -814,7 +848,7 @@ export function GenericQueryPage({ view }: { view: ViewKey }) {
 
         <div className="overflow-hidden rounded-xl border border-line-1 shadow-soft">
           <div ref={containerRef} className="overflow-x-auto">
-            <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, 1100) }}>
+            <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, TABLE_MIN_WIDTH.standard) }}>
               <thead className="bg-fill-2 text-left text-text-2">
                 <tr className="h-[44px]">
                   {module.columns.map((column) => (
@@ -836,11 +870,7 @@ export function GenericQueryPage({ view }: { view: ViewKey }) {
                 {paginatedRows.map((row, index) => (
                   <tr key={`${index}-${row[module.columns[0].key]}`} className="h-[44px] border-b border-line-1 text-text-2 hover:bg-hover">
                     {module.columns.map((column) => (
-                      <td key={column.key} className={cn("border-r border-line-1 px-4 whitespace-nowrap", column.align === "right" && "text-right")} style={getColumnStyle(column.key)} title={String(row[column.key] ?? "")}>
-                        <div className="overflow-hidden text-ellipsis">
-                          {renderGenericValue(row[column.key], column.kind, row[column.toneKey ?? "tone"] as Tone | undefined)}
-                        </div>
-                      </td>
+                      <DataCell key={column.key} style={getColumnStyle(column.key)} align={column.align === "right" ? "right" : undefined} nowrap truncate title={String(row[column.key] ?? "")}>{renderGenericValue(row[column.key], column.kind, row[column.toneKey ?? "tone"] as Tone | undefined)}</DataCell>
                     ))}
                   </tr>
                 ))}
@@ -879,7 +909,17 @@ export function GenericFormPage({ view }: { view: ViewKey }) {
 
   return (
     <div className="space-y-4">
-      <PageTitle title={module.title}>{module.description}</PageTitle>
+      <PageTitle
+        title={module.title}
+        actions={
+          <>
+            <Button tone="primary" onClick={() => Message.success(`${module.title}已保存。`, 2000)}>保存</Button>
+            <Button onClick={() => navigate(`/${view}`)}>返回列表</Button>
+          </>
+        }
+      >
+        {module.description}
+      </PageTitle>
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-4">
           {module.sections.map((section) => (
@@ -898,10 +938,6 @@ export function GenericFormPage({ view }: { view: ViewKey }) {
             ))}
           </div>
         </SalesOrderSection>
-      </div>
-      <div className="flex flex-col gap-3 border-t border-line-1 pt-4 sm:flex-row sm:justify-end">
-        <Button tone="primary" onClick={() => Message.success(`${module.title}已保存。`, 2000)}>保存</Button>
-        <Button onClick={() => navigate(`/${view}`)}>返回列表</Button>
       </div>
     </div>
   );
@@ -1600,7 +1636,7 @@ function EntityStatusDialog({
   );
 }
 
-function ModuleLogTable({ logs, tableId = "shared-logs" }: { logs: any[]; tableId?: string }) {
+function ModuleLogTable({ logs, tableId = "shared-logs" }: { logs: ModuleLog[]; tableId?: string }) {
   const logColumns = [
     { key: "time", width: 180, minWidth: 160 },
     { key: "user", width: 120, minWidth: 100 },
@@ -1611,7 +1647,7 @@ function ModuleLogTable({ logs, tableId = "shared-logs" }: { logs: any[]; tableI
   return (
     <div className="overflow-hidden rounded-xl border border-line-1 bg-white shadow-card">
       <div ref={containerRef} className="overflow-x-auto">
-      <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, 720) }}>
+      <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, TABLE_MIN_WIDTH.compact) }}>
         <thead className="bg-fill-2 text-left text-text-2">
           <tr className="h-10">
             <ResizableHeaderCell width={getColumnStyle("time").width} minWidth={getColumnStyle("time").minWidth} onResizeStart={(clientX) => startResize("time", clientX)}>时间</ResizableHeaderCell>

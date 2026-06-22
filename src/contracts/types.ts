@@ -5,9 +5,15 @@ export type Tone = "green" | "blue" | "orange" | "red" | "gray";
 export type ModuleFilter = {
   key: string;
   label: string;
-  type: "search" | "select" | "dateRange";
+  type: "search" | "batch" | "select" | "dateRange";
   placeholder?: string;
   options?: string[];
+  /**
+   * search / batch 类型专用：指定该筛选项精确匹配 record 的哪些字段。
+   * - 未配置时，search 退化为整行模糊匹配（保留旧行为），batch 退化为匹配 code 字段。
+   * - 配置后，search 对这些字段做模糊匹配（OR），batch 对这些字段做批量精确匹配（OR）。
+   */
+  targetFields?: string[];
 };
 
 export type ModuleColumn = {

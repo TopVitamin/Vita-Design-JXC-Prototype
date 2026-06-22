@@ -111,7 +111,8 @@ export const supplierManagementModuleDefinition: CrudModuleDefinition = buildEnt
   singular: "供应商",
   listDescription: "维护供应商基础资料、结算方式、账期和税率口径。",
   filters: [
-    { key: "keyword", label: "综合搜索", type: "search", placeholder: "供应商编码 / 名称 / 联系人" },
+    { key: "code", label: "供应商编码", type: "batch", placeholder: "可批量，精确匹配", targetFields: ["code"] },
+    { key: "name", label: "供应商名称", type: "search", placeholder: "名称 / 联系人 / 电话", targetFields: ["name", "contact", "phone"] },
     { key: "settlementMethod", label: "结算方式", type: "select", options: supplierSettlementOptions },
     { key: "status", label: "状态", type: "select", options: statusOptions },
   ],

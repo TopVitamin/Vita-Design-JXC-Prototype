@@ -18,6 +18,9 @@ export type {
   ModuleColumn,
   ModuleField,
   ModuleFilter,
+  ModuleLineItem,
+  ModuleLog,
+  ModuleRelation,
   QueryModuleDefinition,
   Tone,
 } from "../types";

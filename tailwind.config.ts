@@ -50,8 +50,12 @@ export default {
         card: "0 6px 18px rgba(15, 35, 95, 0.04)",
         dropdown: "0 12px 32px rgba(29, 33, 41, 0.14)",
         drawer: "0 16px 40px rgba(29, 33, 41, 0.18)",
+        brand: "0 4px 14px 0 rgba(22, 93, 255, 0.25)",
+        "brand-lg": "0 8px 24px 0 rgba(22, 93, 255, 0.32)",
+        "card-hover": "0 8px 30px rgba(22, 93, 255, 0.12)",
       },
       zIndex: {
+        sticky: "10",
         dropdown: "100",
         drawer: "200",
         modal: "300",

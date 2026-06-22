@@ -1,7 +1,10 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { BatchSearchInput, Button, Checkbox, DateField, DateRangeField, Input, Message, PageTitle, Pagination, ResizableHeaderCell, Select, StatusPill, TableSortHeader, TextArea, useResizableColumns } from "../components/Ui";
+import { BatchSearchInput, Button, DateField, DateRangeField, Input, PageTitle, Pagination, ResizableHeaderCell, Select, StatusPill, TableSortHeader, TextArea, useResizableColumns } from "../components/Ui";
+import { ConfirmModal, ConfirmState, EmptyStateRow, LabeledField, ReadonlyValue, SurfaceCard, TextAction, formatMoney, inDateRange, openError, openToast, parseBatchInput } from "../components/ModuleKit";
+import { ActionsCell, DataCell, MoneyCell, StatusCell, StickyFirstColumnCell, StickyFirstColumnHeader, StickySelectCell, SummaryFooter } from "../components/TableCells";
 import { cn } from "../utils/cn";
+import { TABLE_MIN_WIDTH } from "../utils/tableConstants";
 import { compareRecord } from "../utils/sort";
 import {
   approvePurchaseReturn,
@@ -19,7 +22,6 @@ import {
   getPurchaseReturnStockout,
   getPurchaseReturnStockouts,
   getPurchaseReturnStockoutSourceReturns,
-  getReturnTone,
   purchaseReturnReasonOptions,
   rejectPurchaseReturn,
   savePurchaseReturn,
@@ -33,7 +35,6 @@ import {
 } from "../data/purchaseReturnWorkspace";
 
 type SortConfig = { key: string; direction: "asc" | "desc" } | null;
-type ConfirmState = { title: string; content: string; confirmText: string; onConfirm: () => void };
 
 const returnColumns = [
   { key: "__select__", width: 48, minWidth: 48, maxWidth: 48, resizable: false },
@@ -60,92 +61,6 @@ const stockoutColumns = [
   { key: "updatedAt", width: 170, minWidth: 170 },
   { key: "__actions__", width: 180, minWidth: 150, resizable: false },
 ] as const;
-
-function openToast(text: string) {
-  Message.success(text, 2200);
-}
-
-function openError(text: string) {
-  Message.error(text, 2800);
-}
-
-function parseBatchInput(value: string) {
-  return value
-    .split(/[\n,，]/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-function inDateRange(value: string, range: { start: string; end: string }) {
-  if (range.start && value < range.start) return false;
-  if (range.end && value > range.end) return false;
-  return true;
-}
-
-function formatMoney(value: number) {
-  return `¥${value.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-function SurfaceCard({ title, extra, children }: { title: string; extra?: ReactNode; children: ReactNode }) {
-  return (
-    <section className="rounded-lg border border-line-1 bg-white shadow-soft">
-      <div className="flex items-center justify-between border-b border-line-1 px-4 py-3">
-        <div className="text-[15px] font-semibold text-text-1">{title}</div>
-        {extra ? <div className="text-[13px] text-text-2">{extra}</div> : null}
-      </div>
-      <div className="px-4 py-4">{children}</div>
-    </section>
-  );
-}
-
-function LabeledField({ label, error, required = false, className, children }: { label: string; error?: string; required?: boolean; className?: string; children: ReactNode }) {
-  return (
-    <div className={className}>
-      <div className="mb-1.5 text-[13px] text-text-2">
-        {label}
-        {required ? <span className="ml-0.5 text-danger">*</span> : null}
-      </div>
-      {children}
-      {error ? <div className="mt-1 text-xs text-danger">{error}</div> : null}
-    </div>
-  );
-}
-
-function ReadonlyValue({ value, className }: { value: string; className?: string }) {
-  return <div className={cn("flex min-h-8 items-center rounded-md border border-line-1 bg-fill-2 px-3 text-[13px] text-text-2", className)}>{value || "-"}</div>;
-}
-
-function TextAction({ children, onClick }: { children: string; onClick: () => void }) {
-  return (
-    <button type="button" className="text-[13px] text-brand-6 transition hover:text-brand-7" onClick={onClick}>
-      {children}
-    </button>
-  );
-}
-
-function ConfirmModal({ state, onCancel }: { state: ConfirmState | null; onCancel: () => void }) {
-  if (!state) return null;
-  return (
-    <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/35 px-4">
-      <div className="w-full max-w-[420px] rounded-lg border border-line-1 bg-white shadow-drawer">
-        <div className="border-b border-line-1 px-5 py-4 text-[15px] font-semibold text-text-1">{state.title}</div>
-        <div className="px-5 py-4 text-[14px] leading-6 text-text-2">{state.content}</div>
-        <div className="flex justify-end gap-2 border-t border-line-1 px-5 py-4">
-          <Button onClick={onCancel}>取消</Button>
-          <Button tone="primary" onClick={state.onConfirm}>{state.confirmText}</Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function EmptyStateRow({ colSpan }: { colSpan: number }) {
-  return (
-    <tr>
-      <td colSpan={colSpan} className="px-4 py-10 text-center text-[13px] text-text-3">暂无数据</td>
-    </tr>
-  );
-}
 
 function getReturnActions(status: PurchaseReturnStatus) {
   switch (status) {
@@ -203,7 +118,7 @@ export function PurchaseReturnListPage() {
       if (!inDateRange(record.returnDate, filters.returnDate)) return false;
       if (!inDateRange(record.updatedAt.slice(0, 10), filters.updatedAt)) return false;
       return true;
-    }).sort((a, b) => compareRecord(a as any, b as any, sortConfig));
+    }).sort((a, b) => compareRecord(a, b, sortConfig));
   }, [records, filters, sortConfig]);
 
   const pageRows = useMemo(() => filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize), [filteredRecords, currentPage, pageSize]);
@@ -305,13 +220,11 @@ export function PurchaseReturnListPage() {
 
       <div className="overflow-hidden rounded-lg border border-line-1 bg-white shadow-soft">
         <div ref={containerRef} className="overflow-x-auto">
-          <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, 1500) }}>
+          <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, TABLE_MIN_WIDTH.document) }}>
             <thead className="bg-fill-2 text-left text-text-2">
               <tr className="h-[44px]">
-                <th className="sticky left-0 z-10 border-b border-r border-line-1 bg-fill-2 px-3" style={getColumnStyle("__select__")}>
-                  <Checkbox checked={isAllSelected} onChange={(checked) => setSelectedIds(checked ? Array.from(new Set([...selectedIds, ...pageRows.map((row) => row.id)])) : selectedIds.filter((id) => !pageRows.some((row) => row.id === id)))} />
-                </th>
-                <ResizableHeaderCell width={getColumnStyle("no").width} minWidth={getColumnStyle("no").minWidth} className="sticky z-10 bg-fill-2" style={{ left: getColumnStyle("__select__").width }} onResizeStart={(clientX) => startResize("no", clientX)}><TableSortHeader label="退货单号" sortKey="no" currentSort={sortConfig} onSort={handleSort} /></ResizableHeaderCell>
+                <StickySelectCell style={getColumnStyle("__select__")} variant="header" checked={isAllSelected} onChange={(checked) => setSelectedIds(checked ? Array.from(new Set([...selectedIds, ...pageRows.map((row) => row.id)])) : selectedIds.filter((id) => !pageRows.some((row) => row.id === id)))} />
+                <StickyFirstColumnHeader width={getColumnStyle("no").width} minWidth={getColumnStyle("no").minWidth} left={getColumnStyle("__select__").width} onResizeStart={(clientX) => startResize("no", clientX)} label="退货单号" sortKey="no" currentSort={sortConfig} onSort={handleSort} />
                 <ResizableHeaderCell width={getColumnStyle("status").width} minWidth={getColumnStyle("status").minWidth} onResizeStart={(clientX) => startResize("status", clientX)}>单据状态</ResizableHeaderCell>
                 <ResizableHeaderCell width={getColumnStyle("receiptNo").width} minWidth={getColumnStyle("receiptNo").minWidth} onResizeStart={(clientX) => startResize("receiptNo", clientX)}>关联采购入库单</ResizableHeaderCell>
                 <ResizableHeaderCell width={getColumnStyle("supplierLabel").width} minWidth={getColumnStyle("supplierLabel").minWidth} onResizeStart={(clientX) => startResize("supplierLabel", clientX)}>供应商</ResizableHeaderCell>
@@ -325,16 +238,16 @@ export function PurchaseReturnListPage() {
             <tbody>
               {pageRows.length === 0 ? <EmptyStateRow colSpan={10} /> : pageRows.map((record) => (
                 <tr key={record.id} className="group h-[44px] border-b border-line-1 text-text-2 hover:bg-hover-bg">
-                  <td className="sticky left-0 z-10 border-r border-line-1 bg-white px-3 group-hover:bg-hover-bg" style={getColumnStyle("__select__")}><Checkbox checked={selectedIds.includes(record.id)} onChange={() => setSelectedIds((current) => current.includes(record.id) ? current.filter((id) => id !== record.id) : [...current, record.id])} /></td>
-                  <td className="sticky z-10 border-r border-line-1 bg-white px-4 group-hover:bg-hover-bg" style={{ ...getColumnStyle("no"), left: getColumnStyle("__select__").width }}><button type="button" className="text-brand-6 hover:text-brand-7" onClick={() => navigate(`/purchase-return/${record.id}`)}>{record.no}</button></td>
-                  <td className="border-r border-line-1 px-4" style={getColumnStyle("status")}><StatusPill tone={record.statusTone}>{record.status}</StatusPill></td>
-                  <td className="border-r border-line-1 px-4" style={getColumnStyle("receiptNo")}><button type="button" className="text-brand-6 hover:text-brand-7" onClick={() => navigate(`/purchase-receipt/${record.receiptId}`)}>{record.receiptNo}</button></td>
-                  <td className="border-r border-line-1 px-4" style={getColumnStyle("supplierLabel")}>{record.supplierLabel}</td>
-                  <td className="border-r border-line-1 px-4" style={getColumnStyle("warehouseLabel")}>{record.warehouseLabel}</td>
-                  <td className="border-r border-line-1 px-4" style={getColumnStyle("returnDate")}>{record.returnDate}</td>
-                  <td className="border-r border-line-1 px-4" style={getColumnStyle("totalQty")}>{record.totalQty}</td>
-                  <td className="border-r border-line-1 px-4" style={getColumnStyle("updatedAt")}>{record.updatedAt}</td>
-                  <td className="px-4" style={getColumnStyle("__actions__")}><div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">{getReturnActions(record.status).map((action) => <TextAction key={action} onClick={() => handleAction(record, action)}>{action}</TextAction>)}</div></td>
+                  <StickySelectCell style={getColumnStyle("__select__")} variant="body" checked={selectedIds.includes(record.id)} onChange={() => setSelectedIds((current) => current.includes(record.id) ? current.filter((id) => id !== record.id) : [...current, record.id])} />
+                  <StickyFirstColumnCell bodyStyle={{ ...getColumnStyle("no"), left: getColumnStyle("__select__").width }}><button type="button" className="text-brand-6 hover:text-brand-7" onClick={() => navigate(`/purchase-return/${record.id}`)}>{record.no}</button></StickyFirstColumnCell>
+                  <StatusCell style={getColumnStyle("status")} tone={record.statusTone} label={record.status} />
+                  <DataCell style={getColumnStyle("receiptNo")}><button type="button" className="text-brand-6 hover:text-brand-7" onClick={() => navigate(`/purchase-receipt/${record.receiptId}`)}>{record.receiptNo}</button></DataCell>
+                  <DataCell style={getColumnStyle("supplierLabel")}>{record.supplierLabel}</DataCell>
+                  <DataCell style={getColumnStyle("warehouseLabel")}>{record.warehouseLabel}</DataCell>
+                  <DataCell style={getColumnStyle("returnDate")}>{record.returnDate}</DataCell>
+                  <DataCell style={getColumnStyle("totalQty")}>{record.totalQty}</DataCell>
+                  <DataCell style={getColumnStyle("updatedAt")}>{record.updatedAt}</DataCell>
+                  <ActionsCell style={getColumnStyle("__actions__")}>{getReturnActions(record.status).map((action) => <TextAction key={action} onClick={() => handleAction(record, action)}>{action}</TextAction>)}</ActionsCell>
                 </tr>
               ))}
             </tbody>
@@ -385,7 +298,7 @@ export function PurchaseReturnStockoutListPage() {
       if (!inDateRange(record.stockoutDate, filters.stockoutDate)) return false;
       if (!inDateRange(record.updatedAt.slice(0, 10), filters.updatedAt)) return false;
       return true;
-    }).sort((a, b) => compareRecord(a as any, b as any, sortConfig));
+    }).sort((a, b) => compareRecord(a, b, sortConfig));
   }, [records, filters, sortConfig]);
 
   const pageRows = useMemo(() => filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize), [filteredRecords, currentPage, pageSize]);
@@ -453,11 +366,11 @@ export function PurchaseReturnStockoutListPage() {
 
       <div className="overflow-hidden rounded-lg border border-line-1 bg-white shadow-soft">
         <div ref={containerRef} className="overflow-x-auto">
-          <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, 1500) }}>
+          <table className="border-collapse text-sm" style={{ minWidth: Math.max(totalWidth, TABLE_MIN_WIDTH.document) }}>
             <thead className="bg-fill-2 text-left text-text-2">
               <tr className="h-[44px]">
-                <th className="sticky left-0 z-10 border-b border-r border-line-1 bg-fill-2 px-3" style={getColumnStyle("__select__")}><Checkbox checked={isAllSelected} onChange={(checked) => setSelectedIds(checked ? Array.from(new Set([...selectedIds, ...pageRows.map((row) => row.id)])) : selectedIds.filter((id) => !pageRows.some((row) => row.id === id)))} /></th>
-                <ResizableHeaderCell width={getColumnStyle("no").width} minWidth={getColumnStyle("no").minWidth} className="sticky z-10 bg-fill-2" style={{ left: getColumnStyle("__select__").width }} onResizeStart={(clientX) => startResize("no", clientX)}><TableSortHeader label="出库单号" sortKey="no" currentSort={sortConfig} onSort={handleSort} /></ResizableHeaderCell>
+                <StickySelectCell style={getColumnStyle("__select__")} variant="header" checked={isAllSelected} onChange={(checked) => setSelectedIds(checked ? Array.from(new Set([...selectedIds, ...pageRows.map((row) => row.id)])) : selectedIds.filter((id) => !pageRows.some((row) => row.id === id)))} />
+                <StickyFirstColumnHeader width={getColumnStyle("no").width} minWidth={getColumnStyle("no").minWidth} left={getColumnStyle("__select__").width} onResizeStart={(clientX) => startResize("no", clientX)} label="出库单号" sortKey="no" currentSort={sortConfig} onSort={handleSort} />
                 <ResizableHeaderCell width={getColumnStyle("status").width} minWidth={getColumnStyle("status").minWidth} onResizeStart={(clientX) => startResize("status", clientX)}>出库状态</ResizableHeaderCell>
                 <ResizableHeaderCell width={getColumnStyle("returnNo").width} minWidth={getColumnStyle("returnNo").minWidth} onResizeStart={(clientX) => startResize("returnNo", clientX)}>关联采购退货单</ResizableHeaderCell>
                 <ResizableHeaderCell width={getColumnStyle("supplierLabel").width} minWidth={getColumnStyle("supplierLabel").minWidth} onResizeStart={(clientX) => startResize("supplierLabel", clientX)}>供应商</ResizableHeaderCell>
@@ -471,16 +384,16 @@ export function PurchaseReturnStockoutListPage() {
             <tbody>
               {pageRows.length === 0 ? <EmptyStateRow colSpan={10} /> : pageRows.map((record) => (
                 <tr key={record.id} className="group h-[44px] border-b border-line-1 text-text-2 hover:bg-hover-bg">
-                  <td className="sticky left-0 z-10 border-r border-line-1 bg-white px-3 group-hover:bg-hover-bg" style={getColumnStyle("__select__")}><Checkbox checked={selectedIds.includes(record.id)} onChange={() => setSelectedIds((current) => current.includes(record.id) ? current.filter((id) => id !== record.id) : [...current, record.id])} /></td>
-                  <td className="sticky z-10 border-r border-line-1 bg-white px-4 group-hover:bg-hover-bg" style={{ ...getColumnStyle("no"), left: getColumnStyle("__select__").width }}><button type="button" className="text-brand-6 hover:text-brand-7" onClick={() => navigate(`/purchase-return-stockout/${record.id}`)}>{record.no}</button></td>
-                  <td className="border-r border-line-1 px-4" style={getColumnStyle("status")}><StatusPill tone={record.statusTone}>{record.status}</StatusPill></td>
-                  <td className="border-r border-line-1 px-4" style={getColumnStyle("returnNo")}><button type="button" className="text-brand-6 hover:text-brand-7" onClick={() => navigate(`/purchase-return/${record.returnId}`)}>{record.returnNo}</button></td>
-                  <td className="border-r border-line-1 px-4" style={getColumnStyle("supplierLabel")}>{record.supplierLabel}</td>
-                  <td className="border-r border-line-1 px-4" style={getColumnStyle("warehouseLabel")}>{record.warehouseLabel}</td>
-                  <td className="border-r border-line-1 px-4" style={getColumnStyle("stockoutDate")}>{record.stockoutDate}</td>
-                  <td className="border-r border-line-1 px-4 text-right" style={getColumnStyle("totalAmount")}>{formatMoney(record.totalAmount)}</td>
-                  <td className="border-r border-line-1 px-4" style={getColumnStyle("updatedAt")}>{record.updatedAt}</td>
-                  <td className="px-4" style={getColumnStyle("__actions__")}><div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">{getStockoutActions(record.status).map((action) => <TextAction key={action} onClick={() => handleAction(record, action)}>{action}</TextAction>)}</div></td>
+                  <StickySelectCell style={getColumnStyle("__select__")} variant="body" checked={selectedIds.includes(record.id)} onChange={() => setSelectedIds((current) => current.includes(record.id) ? current.filter((id) => id !== record.id) : [...current, record.id])} />
+                  <StickyFirstColumnCell bodyStyle={{ ...getColumnStyle("no"), left: getColumnStyle("__select__").width }}><button type="button" className="text-brand-6 hover:text-brand-7" onClick={() => navigate(`/purchase-return-stockout/${record.id}`)}>{record.no}</button></StickyFirstColumnCell>
+                  <StatusCell style={getColumnStyle("status")} tone={record.statusTone} label={record.status} />
+                  <DataCell style={getColumnStyle("returnNo")}><button type="button" className="text-brand-6 hover:text-brand-7" onClick={() => navigate(`/purchase-return/${record.returnId}`)}>{record.returnNo}</button></DataCell>
+                  <DataCell style={getColumnStyle("supplierLabel")}>{record.supplierLabel}</DataCell>
+                  <DataCell style={getColumnStyle("warehouseLabel")}>{record.warehouseLabel}</DataCell>
+                  <DataCell style={getColumnStyle("stockoutDate")}>{record.stockoutDate}</DataCell>
+                  <MoneyCell style={getColumnStyle("totalAmount")} value={record.totalAmount} />
+                  <DataCell style={getColumnStyle("updatedAt")}>{record.updatedAt}</DataCell>
+                  <ActionsCell style={getColumnStyle("__actions__")}>{getStockoutActions(record.status).map((action) => <TextAction key={action} onClick={() => handleAction(record, action)}>{action}</TextAction>)}</ActionsCell>
                 </tr>
               ))}
             </tbody>
@@ -629,7 +542,7 @@ function PurchaseReturnEditorPage({ mode }: { mode: "create" | "edit" }) {
                 );
               })}
             </tbody>
-            <tfoot className="bg-zinc-100"><tr className="h-[42px] font-semibold text-text-1"><td colSpan={9} className="px-4">本次退货合计：{summaryQty} 件</td></tr></tfoot>
+            <SummaryFooter colSpan={9}>本次退货合计：{summaryQty} 件</SummaryFooter>
           </table>
         </div>
       </SurfaceCard>
@@ -786,7 +699,7 @@ function PurchaseReturnStockoutEditorPage({ mode }: { mode: "create" | "edit" })
                 );
               })}
             </tbody>
-            <tfoot className="bg-zinc-100"><tr className="h-[42px] font-semibold text-text-1"><td colSpan={10} className="px-4">本次出库合计：{totalQty} 件 | {formatMoney(totalAmount)}</td></tr></tfoot>
+            <SummaryFooter colSpan={10}>本次出库合计：{totalQty} 件 | {formatMoney(totalAmount)}</SummaryFooter>
           </table>
         </div>
       </SurfaceCard>
